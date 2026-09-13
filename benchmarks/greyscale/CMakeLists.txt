@@ -1,0 +1,3 @@
+add_executable(aif_greyscale_benchmark benchmark.cpp)
+target_link_libraries(aif_greyscale_benchmark PRIVATE AvsFilters::GreyscaleKernels)
+aif_target_defaults(aif_greyscale_benchmark)

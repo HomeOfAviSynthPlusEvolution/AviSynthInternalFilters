@@ -28,7 +28,7 @@
     {
       "name": "gcc-scalar",
       "inherits": "gcc",
-      "displayName": "GCC scalar without Highway",
+      "displayName": "GCC scalar execution only",
       "binaryDir": "${sourceDir}/out/hwy-gcc-scalar",
       "cacheVariables": {
         "AIF_SCALAR_ONLY": "ON"
