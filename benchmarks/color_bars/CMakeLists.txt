@@ -1,0 +1,3 @@
+add_executable(aif_color_bars_benchmark benchmark.cpp)
+target_link_libraries(aif_color_bars_benchmark PRIVATE AvsFilters::ColorBarsKernels)
+aif_target_defaults(aif_color_bars_benchmark)

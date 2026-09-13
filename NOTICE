@@ -43,3 +43,8 @@ BlankClip/Blackness and StaticImage/SingleFrame derived from AviSynthMinus
 avs_core/filters/source.cpp at commit 008bf727b6047b8b42e06a84219b45c3ad29e477
 and the AviSynthPlus-IF blank_clip adapter. Static sources retain the original
 frame properties, audio and parameter behavior, with Highway pixel fills.
+
+ColorBars/ColorBarsHD derived from AviSynthMinus avs_core/filters/source.cpp
+at commit 008bf727b6047b8b42e06a84219b45c3ad29e477. Scalar color arithmetic
+is retained; Highway replicates scanlines within each horizontal band. HD small
+width writes are bounded to visible pixels rather than writing into padding.
