@@ -1,0 +1,3 @@
+add_executable(aif_merge_benchmark benchmark.cpp)
+target_link_libraries(aif_merge_benchmark PRIVATE AvsFilters::MergeKernels)
+aif_target_defaults(aif_merge_benchmark)
