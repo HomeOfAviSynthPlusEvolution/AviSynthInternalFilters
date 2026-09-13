@@ -1,0 +1,3 @@
+add_executable(aif_convolution_benchmark benchmark.cpp)
+target_link_libraries(aif_convolution_benchmark PRIVATE AvsFilters::ConvolutionKernels)
+aif_target_defaults(aif_convolution_benchmark)
