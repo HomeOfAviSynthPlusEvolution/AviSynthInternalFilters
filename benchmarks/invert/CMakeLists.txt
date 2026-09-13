@@ -1,0 +1,3 @@
+add_executable(aif_invert_benchmark benchmark.cpp)
+target_link_libraries(aif_invert_benchmark PRIVATE AvsFilters::InvertKernels)
+aif_target_defaults(aif_invert_benchmark)
