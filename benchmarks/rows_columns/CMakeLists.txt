@@ -1,0 +1,3 @@
+add_executable(aif_rows_columns_benchmark benchmark.cpp)
+target_link_libraries(aif_rows_columns_benchmark PRIVATE AvsFilters::RowsColumnsKernels)
+aif_target_defaults(aif_rows_columns_benchmark)
