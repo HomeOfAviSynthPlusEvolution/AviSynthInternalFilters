@@ -1,0 +1,3 @@
+add_executable(aif_focus_benchmark benchmark.cpp)
+target_link_libraries(aif_focus_benchmark PRIVATE AvsFilters::FocusKernels)
+aif_target_defaults(aif_focus_benchmark)

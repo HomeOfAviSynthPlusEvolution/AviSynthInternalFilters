@@ -1,0 +1,246 @@
+{
+  "version": "1.4.0",
+  "upstream": "https://github.com/google/highway",
+  "upstream_commit": "2607d3b5b0113992fe84d3848859eae13b3b52c1",
+  "imported_from": "AviSynthComposite",
+  "import_commit": "006661987acddef636660c7be48b636beb8f48a7",
+  "notes": "See highway/README.avs.md for the source subset and CMake changes.",
+  "files": [
+    {
+      "path": "cmake/FindAtomics.cmake",
+      "sha256": "35f86b9832bff2cb8226c92c9c7d1c640e937a181088d19387a38729b6b6f382"
+    },
+    {
+      "path": "CMakeLists.txt",
+      "sha256": "5427db9819c8df015ce204161160739569a915654f2140ba5cb6dae5c60704ee"
+    },
+    {
+      "path": "hwy/abort.cc",
+      "sha256": "ba6ecab5b0e329b4d874151fca3126dd592ec011ca7aac7418686f00ec173ff0"
+    },
+    {
+      "path": "hwy/abort.h",
+      "sha256": "2d0f4f0b6e9390324efa4e45258adf3a19308936c15d9a30cd4d2bb46f19062b"
+    },
+    {
+      "path": "hwy/aligned_allocator.cc",
+      "sha256": "e17dd30bee26274e78b634d73f79c73104bc32da9dc496042ae66d9674619ed5"
+    },
+    {
+      "path": "hwy/aligned_allocator.h",
+      "sha256": "26b97fc2900922a7c38173a662dfaca4e4cbf0a0a87b4ef1290bf248ed2a7af2"
+    },
+    {
+      "path": "hwy/auto_tune.h",
+      "sha256": "b5474dc4a856fc55ef141bd6730c1c38c654ff4161018c3ba9f745d7483fad61"
+    },
+    {
+      "path": "hwy/base.h",
+      "sha256": "e3f6049a91809d443841ffa7ac29b3b0e88827e429b37f54434cb18d3e1edd64"
+    },
+    {
+      "path": "hwy/bit_set.h",
+      "sha256": "caa32ab69f075da4f0e9f135b128602123ca724c3d946bcaf508d101ce34f26c"
+    },
+    {
+      "path": "hwy/cache_control.h",
+      "sha256": "b95011ff21a4ec8a63f5c34f55df6cb6cd9151715e322f39a5e1c7fe0c528750"
+    },
+    {
+      "path": "hwy/detect_compiler_arch.h",
+      "sha256": "2efa39d49fab0800a0dd5f91821df02a3cd86a008eebd68ac98c5249cd4fa85d"
+    },
+    {
+      "path": "hwy/detect_targets.h",
+      "sha256": "b387d11b9f70b65ff9b141ce903ed54595a82ba52f1a83a401a408eaddf8a604"
+    },
+    {
+      "path": "hwy/foreach_target.h",
+      "sha256": "880295b229488bba5227d5279504f355f9363330bf1d98ab63baf553deedee03"
+    },
+    {
+      "path": "hwy/highway.h",
+      "sha256": "de01622abb3e9e85a07d24897daef408a30f7a1967bb0b01a57c1637d3c87f9d"
+    },
+    {
+      "path": "hwy/highway_export.h",
+      "sha256": "8a883413b083c721f879163780630aa3ec741b386b3db6d05ac042292b904d45"
+    },
+    {
+      "path": "hwy/hwy.version",
+      "sha256": "0d1137ca245238584199a0967109ed155e3c09d785b75ad51d231a6d34adb8e6"
+    },
+    {
+      "path": "hwy/nanobenchmark.cc",
+      "sha256": "d55fa47da1d42415ba4604d77b5120418f7f96103e31345c27962c59a3016bfc"
+    },
+    {
+      "path": "hwy/nanobenchmark.h",
+      "sha256": "81c65b91f754c36e3792ed0ae9c9f535092d997254a02508bea06a03f7a67f79"
+    },
+    {
+      "path": "hwy/ops/arm_neon-inl.h",
+      "sha256": "ace812565b0442a20cf897add7b131c276f2bd4ae215fb8579c6b2ec8b183ceb"
+    },
+    {
+      "path": "hwy/ops/arm_sve-inl.h",
+      "sha256": "416b3e484974daac4ec981e701a5719369ce8ef33448468f81b670f425ea2e39"
+    },
+    {
+      "path": "hwy/ops/emu128-inl.h",
+      "sha256": "758b3b45ab49ff28d3c8cf36959d48567678b737d0b12209ab564b2e49c0fac4"
+    },
+    {
+      "path": "hwy/ops/generic_ops-inl.h",
+      "sha256": "5be36414ba0d291405c237e946444088dc0d35bbf2a12d951c0e63ef7dc44ca9"
+    },
+    {
+      "path": "hwy/ops/inside-inl.h",
+      "sha256": "c22abcaafe741459fc5c9456230af24f198e0bd24c3372540cf0248d62dd554e"
+    },
+    {
+      "path": "hwy/ops/loongarch_lasx-inl.h",
+      "sha256": "e18e2ef77454f4f3d7f55ab745319b8fffb41d394c95bcebe9c541be66e90828"
+    },
+    {
+      "path": "hwy/ops/loongarch_lsx-inl.h",
+      "sha256": "16a56eb48053206773477dc4b598dd3245464665b492d8119f8998883494defd"
+    },
+    {
+      "path": "hwy/ops/ppc_vsx-inl.h",
+      "sha256": "84df6dc7b58465f145be20e1e890d4ec9f087dfc5dfe2fcdee9e0093081191da"
+    },
+    {
+      "path": "hwy/ops/rvv-inl.h",
+      "sha256": "07affc69a2c4b391f4e07164bc39b50775f55985674798a0e7a80471dba21ca3"
+    },
+    {
+      "path": "hwy/ops/scalar-inl.h",
+      "sha256": "a68a871534af3d51a45451a7c6a0c4cadcc3405228bd06cc6bec30afde13072a"
+    },
+    {
+      "path": "hwy/ops/set_macros-inl.h",
+      "sha256": "a81df5a112aaff90fc86658f55a9833bb6a3273197debfdbf1880e9266d52cf6"
+    },
+    {
+      "path": "hwy/ops/shared-inl.h",
+      "sha256": "c11dc45203d539ccda4037b8f7b3e49f11ff5de0c7a81e0547cceed36927f135"
+    },
+    {
+      "path": "hwy/ops/wasm_128-inl.h",
+      "sha256": "a25e9c5831b17a80f00fdfabedbafe6c8ff31e15796f6bf100438e01f655d51d"
+    },
+    {
+      "path": "hwy/ops/wasm_256-inl.h",
+      "sha256": "f69b919288c0d3ca819c734e1acc555ed22c00c3f9b403512782e1c988951b2d"
+    },
+    {
+      "path": "hwy/ops/x86_128-inl.h",
+      "sha256": "517cd7afd98fd1c4bcae8c23f1368f63e21184857a368b115df28857edce186a"
+    },
+    {
+      "path": "hwy/ops/x86_256-inl.h",
+      "sha256": "ba5b5b8b0b74fc282c12f72ed7447418ce3fdd3ff16f43146f83d6118209b789"
+    },
+    {
+      "path": "hwy/ops/x86_512-inl.h",
+      "sha256": "2fa4331f2a52c8bf73a6e51ffc2b2e6c356af3bfd781ff1ba8c9ef0a65ff1870"
+    },
+    {
+      "path": "hwy/ops/x86_avx3-inl.h",
+      "sha256": "3ba1ac7fb9b2eb033d4d7bc9fe3101a875c95d24336095de650ff3d1867652ab"
+    },
+    {
+      "path": "hwy/per_target.cc",
+      "sha256": "ea0610df651c54dbea20442acbf89777ce0399b245cf56b2bb2ec201557b022e"
+    },
+    {
+      "path": "hwy/per_target.h",
+      "sha256": "8b44bd7565119df2df3e123a9dbfa82e25166c749979a3fde12e387165e2f0e1"
+    },
+    {
+      "path": "hwy/perf_counters.cc",
+      "sha256": "c3d6024f94ee3b79d5e2d6bf8cac39206e314553d5d473f4423182d69d24f631"
+    },
+    {
+      "path": "hwy/perf_counters.h",
+      "sha256": "2a93e3725b30c66f86460ee83286f543103debb83db123eab1856416f07cbb99"
+    },
+    {
+      "path": "hwy/print-inl.h",
+      "sha256": "35ddebacfc9f665df899c8258d1cbafe83c687f71222b4ee475ceba7f948edae"
+    },
+    {
+      "path": "hwy/print.cc",
+      "sha256": "f3cb05e1d443098acbd2ddd10999c33404b4f369262e233b05b71bd3e239630a"
+    },
+    {
+      "path": "hwy/print.h",
+      "sha256": "56b755654ac1e40f6fda306f95811770ac9c4802ef6840019f479ad09a6880b3"
+    },
+    {
+      "path": "hwy/profiler.cc",
+      "sha256": "d38c9a4d0d4ff00f54f58eb13903600b1e5d983ca5b22d31022bd0719654ac97"
+    },
+    {
+      "path": "hwy/profiler.h",
+      "sha256": "178861c9d276cf46dac824b0444f1ce27d6adc0d7264c6d94cadea579d98f1b8"
+    },
+    {
+      "path": "hwy/robust_statistics.h",
+      "sha256": "37a749bb6eb061056a0df35ed54dfedfe5163345d4fef954060b9c9798911b40"
+    },
+    {
+      "path": "hwy/stats.cc",
+      "sha256": "2ed4d387a5f95c05b8ad8da534ef8c5449b61750fee8abcf88a0dee1147b0190"
+    },
+    {
+      "path": "hwy/stats.h",
+      "sha256": "a4e27387b5c425469c70f22940a60f179532ab33c0b50dc484705c972bc4ce49"
+    },
+    {
+      "path": "hwy/targets.cc",
+      "sha256": "892f3c7c6d0347a82128bc2a4e9aacc32dd3fdc1a51d7faabaeb2da0e7906cb2"
+    },
+    {
+      "path": "hwy/targets.h",
+      "sha256": "27301595b3bea53b4580382188b7d997a734ec66212cb4752ee8538893bdf25d"
+    },
+    {
+      "path": "hwy/timer-inl.h",
+      "sha256": "1fcbc017922560c04ffb26c2210a8856a2356eb9bca11076dd808b8e32ca87bf"
+    },
+    {
+      "path": "hwy/timer.cc",
+      "sha256": "ad7016048d67ddd124ded6f7e5d334f0bbcfb66b580bd572dcb4d069a03ecdb2"
+    },
+    {
+      "path": "hwy/timer.h",
+      "sha256": "20a69178dac619083fbf78be089aa5c7aed1701850c09baa1caf2b501efd1dc3"
+    },
+    {
+      "path": "hwy/x86_cpuid.h",
+      "sha256": "238c85bd9d54c01ca52d0c7719efe143b63e124345a88a6dbc9c4cf901c75d19"
+    },
+    {
+      "path": "libhwy-contrib.pc.in",
+      "sha256": "630485ac597bf5844e9c28aad5ca55809aacb59860934153fba7b154cd3abe44"
+    },
+    {
+      "path": "libhwy-test.pc.in",
+      "sha256": "fbfc2493181ce5958d543e09d53c29932ccba78bcb21249cd91cf1e97a3acd90"
+    },
+    {
+      "path": "libhwy.pc.in",
+      "sha256": "181bcb570630c57c9dd2d3b6f8d86eac687dc32e15705a631dcca4ed0c170705"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "e340270d4f64384569a91d546acb5b094d69ce47f0c015db77abb74dc6f815af"
+    },
+    {
+      "path": "README.avs.md",
+      "sha256": "5983800c485a81fb341002da100ec6fc512a4b1298f3fe0983b026becef911ae"
+    }
+  ]
+}

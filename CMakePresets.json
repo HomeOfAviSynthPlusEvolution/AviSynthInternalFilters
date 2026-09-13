@@ -1,0 +1,83 @@
+{
+  "version": 4,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 24,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "clang-cl",
+      "displayName": "clang-cl x64 (Visual Studio 2026)",
+      "generator": "Visual Studio 18 2026",
+      "architecture": "x64",
+      "toolset": "ClangCL",
+      "binaryDir": "${sourceDir}/out/hwy-clangcl"
+    },
+    {
+      "name": "gcc",
+      "displayName": "GCC native",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/hwy-gcc",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "gcc-scalar",
+      "inherits": "gcc",
+      "displayName": "GCC scalar without Highway",
+      "binaryDir": "${sourceDir}/out/hwy-gcc-scalar",
+      "cacheVariables": {
+        "AIF_SCALAR_ONLY": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "clang-cl",
+      "configurePreset": "clang-cl",
+      "configuration": "Release",
+      "jobs": 4,
+      "nativeToolOptions": [
+        "/p:CL_MPCount=1"
+      ]
+    },
+    {
+      "name": "gcc",
+      "configurePreset": "gcc",
+      "jobs": 4
+    },
+    {
+      "name": "gcc-scalar",
+      "configurePreset": "gcc-scalar",
+      "jobs": 4
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "clang-cl",
+      "configurePreset": "clang-cl",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "gcc",
+      "configurePreset": "gcc",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "gcc-scalar",
+      "configurePreset": "gcc-scalar",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

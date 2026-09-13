@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.24)
+project(AifInstalledConsumer LANGUAGES C CXX)
+find_package(AviSynthInternalFilters CONFIG REQUIRED)
+add_executable(aif_installed_consumer consumer.c)
+target_link_libraries(aif_installed_consumer PRIVATE AvsFilters::FocusKernels)
+enable_testing()
+add_test(NAME installed.consumer COMMAND aif_installed_consumer)

@@ -1,0 +1,29 @@
+AviSynthInternalFilters
+
+Focus implementation derived from AviSynthMinus at commit
+dff33dd6978a7781a9a3dd751c85f17184880a04 (release/0.2).
+
+Original sources:
+  avs_core/filters/focus.cpp
+  avs_core/filters/focus.h
+  avs_core/filters/intel/focus_sse.cpp
+  avs_core/filters/intel/focus_sse.h
+  avs_core/filters/intel/focus_avx2.cpp
+  avs_core/filters/intel/focus_avx2.h
+  avs_core/core/internal.h (numeric and SSE helper excerpts only)
+
+Original copyright: Avisynth v2.5, Copyright 2002 Ben Rudiak-Gould et al.
+Additional original attribution comments are retained in the migrated sources.
+Source file SHA-256 values are recorded in source-manifest.json.
+
+The C facade, SDK-independent target organization, plugin assembly and new tests
+are migration additions. Behavioral adjustments are recorded in docs/MIGRATION.md.
+Production SIMD now uses the vendored Google Highway 1.4.0 source subset.
+Highway is separately licensed under Apache-2.0 or BSD-3-Clause; see
+third_party/highway/LICENSE and README.avs.md. Its fixed upstream commit and
+imported file hashes are recorded in third_party/highway-manifest.json.
+The old Focus intrinsics have been removed following migration validation.
+
+The GPL-2.0-or-later license and inherited AviSynth linking exception are retained.
+The exception keeps its original wording and scope; the new C interface does not
+extend the exception. See LICENSE and the original file headers.
