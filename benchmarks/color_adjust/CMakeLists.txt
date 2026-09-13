@@ -1,0 +1,3 @@
+add_executable(aif_color_adjust_benchmark benchmark.cpp)
+target_link_libraries(aif_color_adjust_benchmark PRIVATE AvsFilters::ColorAdjustKernels)
+aif_target_defaults(aif_color_adjust_benchmark)
