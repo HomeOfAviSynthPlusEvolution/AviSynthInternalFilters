@@ -1,0 +1,3 @@
+add_executable(aif_planes_benchmark benchmark.cpp)
+target_link_libraries(aif_planes_benchmark PRIVATE AvsFilters::PlanesKernels)
+aif_target_defaults(aif_planes_benchmark)
