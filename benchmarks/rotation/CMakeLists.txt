@@ -1,0 +1,3 @@
+add_executable(aif_rotation_benchmark benchmark.cpp)
+target_link_libraries(aif_rotation_benchmark PRIVATE AvsFilters::RotationKernels)
+aif_target_defaults(aif_rotation_benchmark)

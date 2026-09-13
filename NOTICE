@@ -27,3 +27,9 @@ The old Focus intrinsics have been removed following migration validation.
 The GPL-2.0-or-later license and inherited AviSynth linking exception are retained.
 The exception keeps its original wording and scope; the new C interface does not
 extend the exception. See LICENSE and the original file headers.
+
+Rotation adapter and scalar YUY2 rotation derived from AviSynthMinus
+avs_core/filters/turn.cpp, turn.h and transform.cpp/transform.h at commit
+008bf727b6047b8b42e06a84219b45c3ad29e477. Turn code retains Ernst Peche's attribution.
+The rotation kernel replaces the old SSE2/SSSE3 turns with Highway and retains
+scalar paths for RGB24/48 and YUY2. See original source headers for licensing.
