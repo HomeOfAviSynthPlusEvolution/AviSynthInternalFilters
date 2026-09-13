@@ -33,3 +33,8 @@ avs_core/filters/turn.cpp, turn.h and transform.cpp/transform.h at commit
 008bf727b6047b8b42e06a84219b45c3ad29e477. Turn code retains Ernst Peche's attribution.
 The rotation kernel replaces the old SSE2/SSSE3 turns with Highway and retains
 scalar paths for RGB24/48 and YUY2. See original source headers for licensing.
+
+Crop, AddBorders and Letterbox derived from AviSynthMinus transform.cpp/transform.h
+at commit 008bf727b6047b8b42e06a84219b45c3ad29e477 and the AviSynthPlus-IF
+add_borders_filter adapter. Border fills use Highway; transient borders reuse the
+host resizers and MultiOverlay through the public AviSynth interface.

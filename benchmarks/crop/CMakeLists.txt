@@ -1,0 +1,3 @@
+add_executable(aif_crop_benchmark benchmark.cpp)
+target_link_libraries(aif_crop_benchmark PRIVATE AvsFilters::CropKernels)
+aif_target_defaults(aif_crop_benchmark)
