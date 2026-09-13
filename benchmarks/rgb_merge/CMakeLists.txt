@@ -1,0 +1,3 @@
+add_executable(aif_rgb_merge_benchmark benchmark.cpp)
+target_link_libraries(aif_rgb_merge_benchmark PRIVATE AvsFilters::RgbMergeKernels)
+aif_target_defaults(aif_rgb_merge_benchmark)
