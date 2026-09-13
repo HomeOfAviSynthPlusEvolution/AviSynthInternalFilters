@@ -1,0 +1,8 @@
+if(AIF_BUILD_PLUGINS AND AIF_TEST_RUNTIME)
+ add_executable(aif_stack_filter_tests filter_tests.cpp)
+ target_include_directories(aif_stack_filter_tests PRIVATE "${AIF_AVISYNTH_INCLUDE_DIR}" "${PROJECT_SOURCE_DIR}/src/blank_clip/include")
+ target_link_libraries(aif_stack_filter_tests PRIVATE ${CMAKE_DL_LIBS})
+ aif_target_defaults(aif_stack_filter_tests)
+ add_dependencies(aif_stack_filter_tests aif_stack_plugin)
+ add_test(NAME stack.filters COMMAND aif_stack_filter_tests "${AIF_TEST_RUNTIME}" "$<TARGET_FILE:aif_stack_plugin>")
+endif()

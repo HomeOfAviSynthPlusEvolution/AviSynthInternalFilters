@@ -1,0 +1,7 @@
+if(AIF_BUILD_PLUGINS AND AIF_TEST_RUNTIME)
+ add_executable(aif_stack_benchmark benchmark.cpp)
+ target_include_directories(aif_stack_benchmark PRIVATE "${AIF_AVISYNTH_INCLUDE_DIR}" "${PROJECT_SOURCE_DIR}/src/blank_clip/include")
+ target_link_libraries(aif_stack_benchmark PRIVATE ${CMAKE_DL_LIBS})
+ aif_target_defaults(aif_stack_benchmark)
+ add_dependencies(aif_stack_benchmark aif_stack_plugin)
+endif()
