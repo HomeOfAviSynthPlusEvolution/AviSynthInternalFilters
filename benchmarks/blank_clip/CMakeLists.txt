@@ -1,0 +1,3 @@
+add_executable(aif_blank_clip_benchmark benchmark.cpp)
+target_link_libraries(aif_blank_clip_benchmark PRIVATE AvsFilters::BlankClipKernels)
+aif_target_defaults(aif_blank_clip_benchmark)

@@ -38,3 +38,8 @@ Crop, AddBorders and Letterbox derived from AviSynthMinus transform.cpp/transfor
 at commit 008bf727b6047b8b42e06a84219b45c3ad29e477 and the AviSynthPlus-IF
 add_borders_filter adapter. Border fills use Highway; transient borders reuse the
 host resizers and MultiOverlay through the public AviSynth interface.
+
+BlankClip/Blackness and StaticImage/SingleFrame derived from AviSynthMinus
+avs_core/filters/source.cpp at commit 008bf727b6047b8b42e06a84219b45c3ad29e477
+and the AviSynthPlus-IF blank_clip adapter. Static sources retain the original
+frame properties, audio and parameter behavior, with Highway pixel fills.
