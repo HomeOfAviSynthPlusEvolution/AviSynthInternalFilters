@@ -1,0 +1,3 @@
+add_executable(aif_channel_display_benchmark benchmark.cpp)
+target_link_libraries(aif_channel_display_benchmark PRIVATE AvsFilters::ChannelDisplayKernels)
+aif_target_defaults(aif_channel_display_benchmark)
