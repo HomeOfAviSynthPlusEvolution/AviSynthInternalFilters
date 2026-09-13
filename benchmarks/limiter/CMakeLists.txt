@@ -1,0 +1,3 @@
+add_executable(aif_limiter_benchmark benchmark.cpp)
+target_link_libraries(aif_limiter_benchmark PRIVATE AvsFilters::LimiterKernels)
+aif_target_defaults(aif_limiter_benchmark)
