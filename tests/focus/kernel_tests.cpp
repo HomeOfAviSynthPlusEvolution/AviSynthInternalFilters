@@ -230,6 +230,48 @@ void native_adjustment_boundaries() {
           }
 }
 
+void vertical_sharpen_extremes() {
+  const auto supported = aif_focus_supported_cpu();
+  for (uint32_t cpu : {1u, 3u, 7u, 15u}) {
+    if ((cpu & supported) != cpu)
+      continue;
+    for (int bits : {8, 16})
+      for (int width : {15, 16, 17, 31, 32, 33, 63, 64, 65})
+        for (int half : {32768, 48901, 65536}) {
+          const int size = bits / 8, peak = (1 << bits) - 1, row = width * size;
+          Buffer src(row, 3), actual(row, 3), scratch(row, 1);
+          for (int y = 0; y < 3; ++y)
+            for (int x = 0; x < width; ++x) {
+              const int value = x % 3 == 0 ? 0 : x % 3 == 1 ? peak : ((x * 7919 + y * 17389) & peak);
+              if (bits == 8)
+                src.data[y * src.stride + x] = uint8_t(value);
+              else
+                reinterpret_cast<uint16_t*>(src.data + y * src.stride)[x] = uint16_t(value);
+            }
+          auto read = [bits](const Buffer& b, int x, int y) -> int {
+            const auto* line = b.data + y * b.stride;
+            return bits == 8 ? line[x] : reinterpret_cast<const uint16_t*>(line)[x];
+          };
+          std::memcpy(actual.data, src.data, src.stride * 3);
+          check(aif_focus_vertical(actual.data, actual.stride, row, 3, bits, half, half / 32768.0f, scratch.data,
+                                   scratch.stride, cpu) == 0,
+                "vertical sharpening status");
+          const bool quant = ((cpu & 8) && row >= 32) || ((cpu & (bits == 8 ? 1 : 5)) && row >= 16);
+          const int weight = quant ? ((half + 256) >> 9) * 512 : half;
+          for (int y = 0; y < 3; ++y)
+            for (int x = 0; x < width; ++x) {
+              const int64_t c = int64_t(read(src, x, y));
+              const int64_t outer =
+                  int64_t(read(src, x, std::max(0, y - 1))) + int64_t(read(src, x, std::min(2, y + 1)));
+              const auto expected =
+                  std::clamp((2 * c * weight + outer * (32768 - weight) + 32768) >> 16, int64_t(0), int64_t(peak));
+              check(read(actual, x, y) == expected, "vertical sharpening quantization and block order");
+            }
+          check(src.guards() && actual.guards() && scratch.guards(), "vertical sharpening guards");
+        }
+  }
+}
+
 void wide_sad() {
   constexpr int width = 4096, height = 2160;
   Buffer a(width, height), b(width, height);
@@ -273,6 +315,7 @@ int main() {
     spatial_edges();
     invalid_inputs();
     native_adjustment_boundaries();
+    vertical_sharpen_extremes();
     wide_sad();
     concurrent_calls();
     std::printf("%d checks passed; CPU mask %u\n", checks, aif_focus_supported_cpu());

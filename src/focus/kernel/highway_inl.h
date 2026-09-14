@@ -120,6 +120,28 @@ void VerticalRows(uint8_t* data, int stride, int row, int height, int bits, int 
     auto* dst = reinterpret_cast<T*>(data + ptrdiff_t(y) * stride);
     const auto* below = y + 1 == height ? dst : reinterpret_cast<T*>(data + ptrdiff_t(y + 1) * stride);
     size_t x = 0;
+#if HWY_ARCH_X86
+    if constexpr (Quantized && !std::is_same_v<T, float>) {
+      const hn::ScalableTag<T> packed;
+      const auto zero = hn::Zero(packed);
+      const size_t batch = hn::Lanes(packed);
+      for (; x + batch <= width; x += batch) {
+        const auto c = hn::LoadU(packed, dst + x);
+        const auto l = hn::LoadU(packed, upper + x);
+        const auto r = hn::LoadU(packed, below + x);
+        hn::StoreU(c, packed, upper + x);
+        // x86 unpack/pack share the same 128-bit block order. Keep that
+        // order through both arithmetic chains to avoid cross-block shuffles.
+        const auto lo = Adjust<true>(d, hn::BitCast(d, hn::InterleaveLower(packed, c, zero)),
+                                     hn::BitCast(d, hn::InterleaveLower(packed, l, zero)),
+                                     hn::BitCast(d, hn::InterleaveLower(packed, r, zero)), half, amount, peak);
+        const auto hi = Adjust<true>(d, hn::BitCast(d, hn::InterleaveUpper(packed, c, zero)),
+                                     hn::BitCast(d, hn::InterleaveUpper(packed, l, zero)),
+                                     hn::BitCast(d, hn::InterleaveUpper(packed, r, zero)), half, amount, peak);
+        hn::StoreU(hn::ReorderDemote2To(packed, lo, hi), packed, dst + x);
+      }
+    }
+#endif
     for (; x + n <= width; x += n) {
       const auto c = Widen(d, dst + x, n);
       const auto result = Adjust<Quantized>(d, c, Widen(d, upper + x, n), Widen(d, below + x, n), half, amount, peak);
