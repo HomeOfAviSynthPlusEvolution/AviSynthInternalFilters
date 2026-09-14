@@ -3,7 +3,7 @@
 #include <cstdio>
 int main() {
   for (int size : {0, 1, 2, 3, 4, 6, 8})
-    for (int count : {2, 14, 16, 18, 31, 32, 33, 34, 63, 64, 65, 66})
+    for (int count : {2, 14, 16, 18, 31, 32, 33, 34, 63, 64, 65, 66, 1919, 1920, 1921})
       for (int period : {1, 2, 3, 4, 5})
         for (int weave : {0, 1}) {
           if (size == 0 && (count & 1))

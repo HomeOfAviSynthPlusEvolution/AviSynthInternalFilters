@@ -26,6 +26,14 @@ extern "C" int aif_rows_columns_process(const uint8_t* const src[], const int sp
       return 1;
   try {
     std::vector<const uint8_t*> rows(weave ? period : 1);
+    const auto supported = aif_rows_columns_supported_cpu();
+    const auto available = cpu & supported;
+    const uint32_t high = AIF_ROWS_COLUMNS_AVX3_ZEN4 | AIF_ROWS_COLUMNS_AVX3_SPR | AIF_ROWS_COLUMNS_AVX10_2;
+    // These measured interleaved stores favor the AVX2 implementation on Zen4.
+    // Limiting the Zen4 vector width alone does not reproduce that codegen.
+    if (weave && period >= 2 && period <= 4 && (size == 4 || (size == 2 && period == 2)) &&
+        (available & high) == AIF_ROWS_COLUMNS_AVX3_ZEN4 && (supported & AIF_ROWS_COLUMNS_AVX2))
+      cpu = AIF_ROWS_COLUMNS_AVX2;
     auto fn = aif::rows_columns::backend(cpu);
     if (!fn)
       fn = aif::rows_columns::scalar;
