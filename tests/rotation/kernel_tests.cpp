@@ -23,7 +23,7 @@ static void large_turns() {
         std::fill(expected.begin(), expected.end(), 0xAD);
         if (aif_rotation_apply(src, expected.data() + off, w * 4, h, sp, dp, 4, op, 0))
           throw std::runtime_error("large scalar rejected");
-        for (uint32_t cpu : {16u, 32u, 64u, 128u, 256u, 512u, ~0u}) {
+        for (uint32_t cpu : {1u, 2u, 8u, 16u, 32u, 64u, 128u, 256u, 512u, ~0u}) {
           if (cpu != ~0u && !(cpu & aif_rotation_supported_cpu()))
             continue;
           std::fill(actual.begin(), actual.end(), 0xAD);
