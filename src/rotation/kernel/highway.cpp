@@ -2,6 +2,7 @@
 #include "backend.h"
 #ifndef AIF_SCALAR_ONLY
 #include "highway_config.h"
+#include <hwy/cache_control.h>
 #undef HWY_TARGET_INCLUDE
 #define HWY_TARGET_INCLUDE "highway.cpp"
 #include <hwy/foreach_target.h>

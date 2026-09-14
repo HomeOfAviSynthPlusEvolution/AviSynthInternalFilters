@@ -54,6 +54,52 @@ HWY_INLINE void TurnTiles(D tile, const uint8_t* s, uint8_t* d, int w, int h, in
   if constexpr (hn::MaxLanes(tile) > 1)
     TurnTiles(hn::Half<D>(), s, d, w, h, sp, dp, y);
 }
+#if HWY_ARCH_X86 && HWY_TARGET <= HWY_AVX3 && !defined(HWY_DISABLE_CACHE_CONTROL)
+template <class D>
+HWY_INLINE void TurnStream32(D tile, const uint8_t* s, uint8_t* d, int w, int h, int sp, int dp, int& y) {
+  static_assert(hn::MaxLanes(tile) == 8);
+  constexpr int n = 8;
+  for (; y + 2 * n <= h; y += 2 * n) {
+    int x = 0;
+    for (; x + n <= w; x += n) {
+      hn::VFromD<D> output[16];
+      for (int group = 0; group < 16; group += 8) {
+        hn::VFromD<D> rows[8], t[8], q[8], columns[8];
+        const hn::Repartition<uint64_t, D> wide;
+        for (int i = 0; i < 8; ++i)
+          rows[i] = hn::LoadU(tile, reinterpret_cast<const uint32_t*>(s + ptrdiff_t(y + group + i) * sp) + x);
+        for (int i = 0; i < 8; i += 2) {
+          t[i] = hn::InterleaveLower(tile, rows[i], rows[i + 1]);
+          t[i + 1] = hn::InterleaveUpper(tile, rows[i], rows[i + 1]);
+        }
+        for (int base = 0; base < 8; base += 4) {
+          for (int i = 0; i < 2; ++i) {
+            q[base + 2 * i] = hn::BitCast(
+                tile, hn::InterleaveLower(wide, hn::BitCast(wide, t[base + i]), hn::BitCast(wide, t[base + i + 2])));
+            q[base + 2 * i + 1] = hn::BitCast(
+                tile, hn::InterleaveUpper(wide, hn::BitCast(wide, t[base + i]), hn::BitCast(wide, t[base + i + 2])));
+          }
+        }
+        for (int i = 0; i < 4; ++i) {
+          columns[i] = hn::ConcatLowerLower(tile, q[i + 4], q[i]);
+          columns[i + 4] = hn::ConcatUpperUpper(tile, q[i + 4], q[i]);
+        }
+        for (int i = 0; i < 8; ++i)
+          output[group + i] = columns[i];
+      }
+      const hn::CappedTag<uint32_t, 16> full;
+      for (int i = 0; i < 8; ++i)
+        hn::Stream(hn::Combine(full, output[i + 8], output[i]), full,
+                   reinterpret_cast<uint32_t*>(d + ptrdiff_t(x + i) * dp) + y);
+    }
+    for (; x < w; ++x)
+      for (int i = 0; i < 2 * n; ++i)
+        std::memcpy(d + ptrdiff_t(x) * dp + (y + i) * 4, s + ptrdiff_t(y + i) * sp + x * 4, 4);
+  }
+}
+
+#endif
+
 template <class T>
 void Typed(const uint8_t* s, uint8_t* d, int row, int h, int sp, int dp, int op) {
   const int w = row / sizeof(T);
@@ -101,6 +147,15 @@ void Typed(const uint8_t* s, uint8_t* d, int row, int h, int sp, int dp, int op)
   const hn::CappedTag<T, 32 / sizeof(T)> turn_tag;
 #else
   const hn::CappedTag<T, sizeof(T) == 1 ? 64 : 32 / sizeof(T)> turn_tag;
+#endif
+#if HWY_ARCH_X86 && HWY_TARGET <= HWY_AVX3 && !defined(HWY_DISABLE_CACHE_CONTROL)
+  if constexpr (sizeof(T) == 4) {
+    // Complete cache-line writes avoid allocating the large transposed output in cache.
+    if ((reinterpret_cast<uintptr_t>(d) & 63) == 0 && dp % 64 == 0 && size_t(w) * h >= 1920u * 1080u) {
+      TurnStream32(turn_tag, s, d, w, h, sp, dp, y);
+      hwy::FlushStream();
+    }
+  }
 #endif
   TurnTiles(turn_tag, s, d, w, h, sp, dp, y);
 }
