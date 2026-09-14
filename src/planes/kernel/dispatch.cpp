@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "backend.h"
+#ifndef AIF_SCALAR_ONLY
+#include "hwy/cache_control.h"
+#endif
 #include <blank_clip/kernel.h>
 #include <limits>
 #include <cstddef>
@@ -16,8 +19,17 @@ extern "C" int aif_planes_swap(const uint8_t* s, int sp, uint8_t* d, int dp, int
   if (w <= 0 || w % 2 || w > std::numeric_limits<int>::max() / 2 || !geometry(s, sp, d, dp, w * 2, w * 2, h))
     return 1;
   auto fn = row(cpu);
+#if !defined(AIF_SCALAR_ONLY) && !defined(HWY_DISABLE_CACHE_CONTROL)
+  const bool stream = uint64_t(w) * h >= 1920u * 1080u && uintptr_t(d) % 64 == 0 && dp % 64 == 0;
+#else
+  const bool stream = false;
+#endif
   for (int y = 0; y < h; ++y)
-    fn(0, s + ptrdiff_t(y) * sp, nullptr, nullptr, d + ptrdiff_t(y) * dp, w / 2, 0);
+    fn(0, s + ptrdiff_t(y) * sp, nullptr, nullptr, d + ptrdiff_t(y) * dp, w / 2, stream ? 1 : 0);
+#ifndef AIF_SCALAR_ONLY
+  if (stream)
+    hwy::FlushStream();
+#endif
   return 0;
 }
 extern "C" int aif_planes_extract_uv(const uint8_t* s, int sp, uint8_t* d, int dp, int w, int h, int v, int packed,

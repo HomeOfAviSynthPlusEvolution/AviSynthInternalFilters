@@ -2,10 +2,37 @@
 #include "planes/kernel.h"
 #include <vector>
 #include <cstdio>
+bool large_swap(uint32_t cpu) {
+  for (int w : {1918, 1920, 1922})
+    for (int offset : {0, 1, 2}) {
+      const int h = 1080, pitch = ((w * 2 + 63) & ~63) + (offset == 2 ? 4 : 0);
+      std::vector<uint8_t> source(size_t(pitch) * h + 1), output(size_t(pitch) * h + 128, 0x71);
+      auto expected = output;
+      const size_t origin = ((64 - uintptr_t(output.data()) % 64) % 64) + (offset == 1 ? 1 : 0);
+      const auto* src = source.data() + 1;
+      for (size_t i = 0; i < source.size(); ++i)
+        source[i] = uint8_t(i * 37);
+      for (int y = 0; y < h; ++y)
+        for (int x = 0; x < w * 2; x += 4) {
+          const size_t i = size_t(y) * pitch + x;
+          expected[origin + i] = src[i];
+          expected[origin + i + 1] = src[i + 3];
+          expected[origin + i + 2] = src[i + 2];
+          expected[origin + i + 3] = src[i + 1];
+        }
+      if (aif_planes_swap(src, pitch, output.data() + origin, pitch, w, h, cpu) || output != expected)
+        return false;
+    }
+  return true;
+}
 int main() {
+  if (!large_swap(0))
+    return 4;
   for (uint32_t selected : {1u, 2u, 4u, 8u, 16u, 32u, 64u, 128u, 256u, 512u, ~0u}) {
     if (selected != ~0u && !(selected & aif_planes_supported_cpu()))
       continue;
+    if (!large_swap(selected))
+      return 4;
     for (int count : {1, 2, 7, 15, 16, 17, 31, 32, 33, 62, 63, 64, 65, 66})
       for (int uv : {0, 1})
         for (int op : {0, 1, 2, 3, 4}) {

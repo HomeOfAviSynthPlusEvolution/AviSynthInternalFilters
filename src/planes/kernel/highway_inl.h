@@ -11,8 +11,14 @@ void ProcessRow(int op, const uint8_t* s, const uint8_t* u, const uint8_t* v, ui
     const auto indices = hn::LoadDup128(d, order);
     const int pairs = int(hn::Lanes(d)) / 4;
     int x = 0;
-    for (; x <= count - pairs; x += pairs)
-      hn::StoreU(hn::TableLookupBytes(hn::LoadU(d, s + 4 * x), indices), d, dst + 4 * x);
+    for (; x <= count - pairs; x += pairs) {
+      const auto value = hn::TableLookupBytes(hn::LoadU(d, s + 4 * x), indices);
+      // Stream complete cache lines only; leave the final partial line cached.
+      if (pos == 1 && x + pairs <= (count & ~15))
+        hn::Stream(value, d, dst + 4 * x);
+      else
+        hn::StoreU(value, d, dst + 4 * x);
+    }
     scalar(op, s + 4 * x, nullptr, nullptr, dst + 4 * x, count - x, pos);
     return;
   }
