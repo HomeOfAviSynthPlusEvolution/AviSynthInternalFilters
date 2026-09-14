@@ -70,6 +70,7 @@ MergeLuma::MergeLuma(PClip _child, PClip _clip, float _weight, IScriptEnvironmen
     weight = 0.0f;
   if (weight > 1.0f)
     weight = 1.0f;
+  plan_ = make_plan(env);
 }
 
 PVideoFrame __stdcall MergeLuma::GetFrame(int n, IScriptEnvironment* env) {
@@ -83,7 +84,7 @@ PVideoFrame __stdcall MergeLuma::GetFrame(int n, IScriptEnvironment* env) {
   if (vi.IsYUY2()) {
     env->MakeWritable(&src);
     mix({src->GetWritePtr(), src->GetPitch(), 2}, {luma->GetReadPtr(), luma->GetPitch(), 2},
-        {vi.width, vi.height, 0, vi.height}, 8, weight < 0.9961f ? weight : 1.0, env);
+        {vi.width, vi.height, 0, vi.height}, 8, weight < 0.9961f ? weight : 1.0, plan_.get(), env);
     return src;
   } // Planar
   if (weight > 0.9961f) {
@@ -128,7 +129,8 @@ PVideoFrame __stdcall MergeLuma::GetFrame(int n, IScriptEnvironment* env) {
     int src_rowsize = src->GetRowSize(PLANAR_Y);
     int src_height = src->GetHeight(PLANAR_Y);
 
-    merge_plane(srcpY, lumapY, src_pitch, luma_pitch, src_rowsize, src_height, weight, pixelsize, bits_per_pixel, env);
+    merge_plane(srcpY, lumapY, src_pitch, luma_pitch, src_rowsize, src_height, weight, pixelsize, bits_per_pixel,
+                plan_.get(), env);
   }
 
   return src;

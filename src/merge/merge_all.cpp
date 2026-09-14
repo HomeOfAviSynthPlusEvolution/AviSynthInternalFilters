@@ -61,6 +61,7 @@ MergeAll::MergeAll(PClip _child, PClip _clip, float _weight, IScriptEnvironment*
     weight = 0.0f;
   if (weight > 1.0f)
     weight = 1.0f;
+  plan_ = make_plan(env);
 }
 
 PVideoFrame __stdcall MergeAll::GetFrame(int n, IScriptEnvironment* env) {
@@ -80,7 +81,7 @@ PVideoFrame __stdcall MergeAll::GetFrame(int n, IScriptEnvironment* env) {
   const int src_rowsize = src->GetRowSize();
 
   merge_plane(srcp, srcp2, src_pitch, src2->GetPitch(), src_rowsize, src->GetHeight(), weight, pixelsize,
-              bits_per_pixel, env);
+              bits_per_pixel, plan_.get(), env);
 
   if (vi.IsPlanar()) {
     const int planesYUV[4] = {PLANAR_Y, PLANAR_U, PLANAR_V, PLANAR_A};
@@ -90,7 +91,7 @@ PVideoFrame __stdcall MergeAll::GetFrame(int n, IScriptEnvironment* env) {
     for (int p = 1; p < vi.NumComponents(); p++) {
       const int plane = planes[p];
       merge_plane(src->GetWritePtr(plane), src2->GetReadPtr(plane), src->GetPitch(plane), src2->GetPitch(plane),
-                  src->GetRowSize(plane), src->GetHeight(plane), weight, pixelsize, bits_per_pixel, env);
+                  src->GetRowSize(plane), src->GetHeight(plane), weight, pixelsize, bits_per_pixel, plan_.get(), env);
     }
   }
 

@@ -1,5 +1,6 @@
 #pragma once
 #include <avisynth.h>
+#include <memory>
 #include "merge/kernel.h"
 namespace aif::filters::merge {
 inline constexpr uint32_t allowed_cpu_flags(uint64_t flags) {
@@ -34,6 +35,13 @@ inline constexpr uint32_t allowed_cpu_flags(uint64_t flags) {
 inline uint32_t allowed_cpu(IScriptEnvironment* env) {
   return allowed_cpu_flags(env->GetCPUFlagsEx());
 }
+using MergePlan = std::unique_ptr<aif_merge_plan, decltype(&aif_merge_destroy)>;
+inline MergePlan make_plan(IScriptEnvironment* env) {
+  aif_merge_plan* plan = nullptr;
+  if (aif_merge_create(allowed_cpu(env), &plan))
+    env->ThrowError("Merge: cannot create kernel plan");
+  return MergePlan(plan, aif_merge_destroy);
+}
 struct WritePlane {
   uint8_t* data;
   int pitch, step;
@@ -45,15 +53,16 @@ struct ReadPlane {
 struct Rows {
   int width, height, first, count;
 };
-inline void mix(WritePlane base, ReadPlane source, Rows rows, int bits, double weight, IScriptEnvironment* env) {
-  if (aif_merge_mix(base.data, source.data, base.pitch, source.pitch, rows.width, rows.height, bits, base.step, weight,
-                    allowed_cpu(env)))
+inline void mix(WritePlane base, ReadPlane source, Rows rows, int bits, double weight, const aif_merge_plan* plan,
+                IScriptEnvironment* env) {
+  if (aif_merge_mix_with_plan(plan, base.data, source.data, base.pitch, source.pitch, rows.width, rows.height, bits,
+                              base.step, weight))
     env->ThrowError("Merge: kernel arguments invalid");
 }
 inline void merge_plane(uint8_t* base, const uint8_t* source, int bp, int sp, int row, int h, float weight, int bytes,
-                        int bits, IScriptEnvironment* env) {
+                        int bits, const aif_merge_plan* plan, IScriptEnvironment* env) {
   if (weight > 0.4961f && weight < 0.5039f)
     weight = 0.5f;
-  mix({base, bp, bytes}, {source, sp, bytes}, {row / bytes, h, 0, h}, bits, weight, env);
+  mix({base, bp, bytes}, {source, sp, bytes}, {row / bytes, h, 0, h}, bits, weight, plan, env);
 }
 } // namespace aif::filters::merge

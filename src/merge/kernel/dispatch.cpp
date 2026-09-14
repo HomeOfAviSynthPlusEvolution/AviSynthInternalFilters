@@ -4,6 +4,7 @@
 #include <hwy/detect_targets.h>
 #endif
 #include <cmath>
+#include <new>
 extern "C" uint32_t aif_merge_supported_cpu(void) {
   uint32_t cpu = 0;
 #ifndef AIF_SCALAR_ONLY
@@ -31,16 +32,12 @@ extern "C" uint32_t aif_merge_supported_cpu(void) {
 #endif
   return cpu;
 }
-extern "C" int aif_merge_mix(uint8_t* base, const uint8_t* source, int bp, int sp, int w, int h, int bits, int step,
-                             double weight, uint32_t cpu) {
-  if (w == 0 || h == 0)
-    return CP_OK;
-  if ((bits != 8 && bits != 10 && bits != 12 && bits != 14 && bits != 16 && bits != 32) || bp <= 0 || sp <= 0 ||
-      !std::isfinite(weight) || weight < 0 || weight > 1)
-    return CP_INVALID_ARGUMENT;
-  int bytes = bits == 8 ? 1 : bits == 32 ? 4 : 2;
-  if (step != bytes && !(bits == 8 && step == 2))
-    return CP_INVALID_ARGUMENT;
+struct aif_merge_plan {
+  const cp_kernels* primary = nullptr;
+  const cp_kernels* large_u16_half = nullptr;
+};
+namespace {
+aif_merge_plan select_plan(uint32_t cpu) {
   int64_t mask = 0;
 #ifndef AIF_SCALAR_ONLY
   if (cpu & 1)
@@ -66,18 +63,61 @@ extern "C" int aif_merge_mix(uint8_t* base, const uint8_t* source, int bp, int s
 #else
   (void)cpu;
 #endif
-  auto target = cp_choose_target(mask);
+  const auto target = cp_choose_target(mask);
+  aif_merge_plan plan{cp_get_kernels(target), nullptr};
 #ifndef AIF_SCALAR_ONLY
-  // Measured large U16 averages favor AVX2; keep unmeasured targets untouched.
-  if (bits == 16 && weight == .5 && uint64_t(w > 0 ? w : 0) * (h > 0 ? h : 0) >= 1920u * 1080u &&
-      (target == HWY_AVX3 || target == HWY_AVX3_DL || target == HWY_AVX3_ZEN4) && (cp_supported_targets() & HWY_AVX2))
-    target = HWY_AVX2;
+  // Preserve the measured large-U16 policy while resolving tables only once.
+  if ((target == HWY_AVX3 || target == HWY_AVX3_DL || target == HWY_AVX3_ZEN4) && (cp_supported_targets() & HWY_AVX2))
+    plan.large_u16_half = cp_get_kernels(HWY_AVX2);
 #endif
-  auto fn = cp_get_kernels(target);
+  return plan;
+}
+int validate(int bp, int sp, int w, int h, int bits, int step, double weight) {
+  if (w == 0 || h == 0)
+    return CP_OK;
+  if ((bits != 8 && bits != 10 && bits != 12 && bits != 14 && bits != 16 && bits != 32) || bp <= 0 || sp <= 0 ||
+      !std::isfinite(weight) || weight < 0 || weight > 1)
+    return CP_INVALID_ARGUMENT;
+  int bytes = bits == 8 ? 1 : bits == 32 ? 4 : 2;
+  if (step != bytes && !(bits == 8 && step == 2))
+    return CP_INVALID_ARGUMENT;
+  return CP_OK;
+}
+int apply(const aif_merge_plan& plan, uint8_t* base, const uint8_t* source, int bp, int sp, int w, int h, int bits,
+          int step, double weight) {
+  const auto* fn = plan.primary;
+  if (plan.large_u16_half && bits == 16 && weight == .5 && uint64_t(w > 0 ? w : 0) * (h > 0 ? h : 0) >= 1920u * 1080u)
+    fn = plan.large_u16_half;
   cp_plane_config config{};
   config.format = {bits == 8 ? CP_U8 : bits == 32 ? CP_F32 : CP_U16, bits};
   config.operation = CP_MIX;
   config.opacity = weight;
   return fn->process_plane(&config, {base, bp, step}, {source, sp, step}, nullptr, nullptr, nullptr, {base, bp, step},
                            {w, h, 0, h});
+}
+} // namespace
+extern "C" int aif_merge_create(uint32_t cpu, aif_merge_plan** out) {
+  if (!out)
+    return CP_INVALID_ARGUMENT;
+  *out = new (std::nothrow) aif_merge_plan(select_plan(cpu));
+  return *out ? CP_OK : CP_INVALID_ARGUMENT;
+}
+extern "C" void aif_merge_destroy(aif_merge_plan* plan) {
+  delete plan;
+}
+extern "C" int aif_merge_mix_with_plan(const aif_merge_plan* plan, uint8_t* base, const uint8_t* source, int bp, int sp,
+                                       int w, int h, int bits, int step, double weight) {
+  if (!plan)
+    return CP_INVALID_ARGUMENT;
+  const int status = validate(bp, sp, w, h, bits, step, weight);
+  if (status || w == 0 || h == 0)
+    return status;
+  return apply(*plan, base, source, bp, sp, w, h, bits, step, weight);
+}
+extern "C" int aif_merge_mix(uint8_t* base, const uint8_t* source, int bp, int sp, int w, int h, int bits, int step,
+                             double weight, uint32_t cpu) {
+  const int status = validate(bp, sp, w, h, bits, step, weight);
+  if (status || w == 0 || h == 0)
+    return status;
+  return apply(select_plan(cpu), base, source, bp, sp, w, h, bits, step, weight);
 }

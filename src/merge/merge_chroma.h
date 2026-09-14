@@ -39,6 +39,7 @@
 
 #pragma once
 #include <avisynth.h>
+#include "kernel_adapter.h"
 namespace aif::filters::merge {
 class MergeChroma : public GenericVideoFilter
 /**
@@ -57,6 +58,7 @@ public:
   static AVSValue __cdecl Create(AVSValue args, void* user_data, IScriptEnvironment* env);
 
 private:
+  MergePlan plan_{nullptr, aif_merge_destroy};
   PClip clip;
   float weight;
   int pixelsize;

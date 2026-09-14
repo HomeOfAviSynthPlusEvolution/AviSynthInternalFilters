@@ -64,6 +64,7 @@ MergeChroma::MergeChroma(PClip _child, PClip _clip, float _weight, IScriptEnviro
 
   pixelsize = vi.ComponentSize();
   bits_per_pixel = vi.BitsPerComponent();
+  plan_ = make_plan(env);
 }
 
 PVideoFrame __stdcall MergeChroma::GetFrame(int n, IScriptEnvironment* env) {
@@ -81,7 +82,7 @@ PVideoFrame __stdcall MergeChroma::GetFrame(int n, IScriptEnvironment* env) {
     if (vi.IsYUY2()) {
       env->MakeWritable(&src);
       mix({src->GetWritePtr() + 1, src->GetPitch(), 2}, {chroma->GetReadPtr() + 1, chroma->GetPitch(), 2},
-          {w / 2, h, 0, h}, 8, weight, env);
+          {w / 2, h, 0, h}, 8, weight, plan_.get(), env);
     } else { // Planar YUV
       env->MakeWritable(&src);
       src->GetWritePtr(PLANAR_Y); //Must be requested
@@ -97,20 +98,20 @@ PVideoFrame __stdcall MergeChroma::GetFrame(int n, IScriptEnvironment* env) {
       int src_height_uv = src->GetHeight(PLANAR_U);
 
       merge_plane(srcpU, chromapU, src_pitch_uv, chroma_pitch_uv, src_rowsize_u, src_height_uv, weight, pixelsize,
-                  bits_per_pixel, env);
+                  bits_per_pixel, plan_.get(), env);
       merge_plane(srcpV, chromapV, src_pitch_uv, chroma_pitch_uv, src_rowsize_v, src_height_uv, weight, pixelsize,
-                  bits_per_pixel, env);
+                  bits_per_pixel, plan_.get(), env);
 
       if (vi.IsYUVA())
         merge_plane(src->GetWritePtr(PLANAR_A), chroma->GetReadPtr(PLANAR_A), src->GetPitch(PLANAR_A),
                     chroma->GetPitch(PLANAR_A), src->GetRowSize(PLANAR_A), src->GetHeight(PLANAR_A), weight, pixelsize,
-                    bits_per_pixel, env);
+                    bits_per_pixel, plan_.get(), env);
     }
   } else { // weight == 1.0
     if (vi.IsYUY2()) {
       env->MakeWritable(&chroma);
       mix({chroma->GetWritePtr(), chroma->GetPitch(), 2}, {src->GetReadPtr(), src->GetPitch(), 2}, {w / 2, h, 0, h}, 8,
-          1.0, env);
+          1.0, plan_.get(), env);
       return chroma;
     } else {
       if (src->IsWritable()) {
