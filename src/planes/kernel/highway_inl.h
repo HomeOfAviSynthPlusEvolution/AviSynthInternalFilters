@@ -4,6 +4,19 @@ namespace aif::planes {
 namespace HWY_NAMESPACE {
 namespace hn = hwy::HWY_NAMESPACE;
 void ProcessRow(int op, const uint8_t* s, const uint8_t* u, const uint8_t* v, uint8_t* dst, int count, int pos) {
+#if HWY_ARCH_X86 && HWY_TARGET != HWY_SSE2 && HWY_TARGET != HWY_SCALAR && HWY_TARGET != HWY_EMU128
+  if (op == 0) {
+    const hn::ScalableTag<uint8_t> d;
+    HWY_ALIGN static constexpr uint8_t order[16] = {0, 3, 2, 1, 4, 7, 6, 5, 8, 11, 10, 9, 12, 15, 14, 13};
+    const auto indices = hn::LoadDup128(d, order);
+    const int pairs = int(hn::Lanes(d)) / 4;
+    int x = 0;
+    for (; x <= count - pairs; x += pairs)
+      hn::StoreU(hn::TableLookupBytes(hn::LoadU(d, s + 4 * x), indices), d, dst + 4 * x);
+    scalar(op, s + 4 * x, nullptr, nullptr, dst + 4 * x, count - x, pos);
+    return;
+  }
+#endif
   if (op == 0 || (HWY_TARGET == HWY_SSE2 && op <= 2)) {
     // A YUY2 pair is one 32-bit lane: extract chroma without unpacking all four channels.
     const hn::ScalableTag<uint32_t> d32;
