@@ -30,7 +30,27 @@ bool test(int bits, int width, int step, uint32_t cpu) {
                                cpu) &&
          s == inplace_ref;
 }
+bool overlapping_table() {
+  for (uint32_t cpu : {0u, ~0u}) {
+    std::vector<uint16_t> table(65536);
+    for (size_t i = 0; i < table.size(); ++i)
+      table[i] = uint16_t(65535 - i);
+    const uint16_t input[] = {65535, 0, 1};
+    uint16_t output[3] = {};
+    if (aif_color_adjust_map(reinterpret_cast<uint8_t*>(output), 6, reinterpret_cast<const uint8_t*>(input), 6, 3, 1,
+                             table.data(), 16, 1, cpu) ||
+        output[0] != 0 || output[1] != 65535 || output[2] != 65534)
+      return false;
+    if (aif_color_adjust_map(reinterpret_cast<uint8_t*>(table.data()), 6, reinterpret_cast<const uint8_t*>(input), 6, 3,
+                             1, table.data(), 16, 1, cpu) ||
+        table[0] != 0 || table[1] != 65535 || table[2] != 65534)
+      return false;
+  }
+  return true;
+}
 int main() {
+  if (!overlapping_table())
+    return 2;
   int n = 0;
   for (int bits : {8, 10, 12, 14, 16})
     for (int w : {1, 3, 4, 7, 16, 17, 31, 32, 33, 63, 64, 65, 256, 257})
