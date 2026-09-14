@@ -190,6 +190,25 @@ void HorizontalSegment(const T* src, T* dst, size_t width, size_t begin, size_t 
   for (; x < end && x < distance; ++x)
     edge(x);
   const size_t interior = std::min(end, width > distance ? width - distance : 0);
+#if HWY_ARCH_X86
+  if constexpr (Quantized && std::is_same_v<T, uint8_t> && Layout != AIF_FOCUS_YUY2) {
+    const hn::ScalableTag<uint8_t> packed;
+    const auto zero = hn::Zero(packed);
+    const size_t batch = hn::Lanes(packed);
+    for (; x + batch <= interior; x += batch) {
+      const auto c = hn::LoadU(packed, src + x);
+      const auto l = hn::LoadU(packed, src + x - distance);
+      const auto r = hn::LoadU(packed, src + x + distance);
+      const auto lo = Adjust<true>(d, hn::BitCast(d, hn::InterleaveLower(packed, c, zero)),
+                                   hn::BitCast(d, hn::InterleaveLower(packed, l, zero)),
+                                   hn::BitCast(d, hn::InterleaveLower(packed, r, zero)), half, amount, peak);
+      const auto hi = Adjust<true>(d, hn::BitCast(d, hn::InterleaveUpper(packed, c, zero)),
+                                   hn::BitCast(d, hn::InterleaveUpper(packed, l, zero)),
+                                   hn::BitCast(d, hn::InterleaveUpper(packed, r, zero)), half, amount, peak);
+      hn::StoreU(hn::ReorderDemote2To(packed, lo, hi), packed, dst + x);
+    }
+  }
+#endif
   for (; x + n <= interior; x += n) {
     const auto c = Widen(d, src + x, n);
     auto left = Widen(d, src + x - distance, n);
