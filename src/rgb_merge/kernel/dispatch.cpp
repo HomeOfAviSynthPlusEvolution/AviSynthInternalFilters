@@ -64,6 +64,17 @@ const vc_layout_functions* layout(uint32_t cpu) {
 #endif
   return vc_get_layout_functions(mask & -mask);
 }
+// Restrict the measured Zen4 fallback to BGRA packing; keep unpacking targets.
+const vc_layout_functions* pack_layout(uint32_t cpu, int bytes, int dc, int w, int h) {
+  const auto available = cpu & aif_rgb_merge_supported_cpu();
+  const uint32_t higher = AIF_RGB_MERGE_AVX3_ZEN4 | AIF_RGB_MERGE_AVX3_SPR | AIF_RGB_MERGE_AVX10_2;
+  if (dc == 4 && uint64_t(w) * h >= 1920u * 1080u && (available & higher) == AIF_RGB_MERGE_AVX3_ZEN4) {
+    const uint32_t target = bytes == 1 ? AIF_RGB_MERGE_AVX3 : AIF_RGB_MERGE_AVX3_DL;
+    if (aif_rgb_merge_supported_cpu() & target)
+      return layout(target);
+  }
+  return layout(cpu);
+}
 } // namespace
 extern "C" int aif_rgb_merge_render(const uint8_t* const src[4], const int sp[4], const int kinds[4],
                                     uint8_t* const dst[4], const int dp[4], int w, int h, int bytes, int dc,
@@ -92,8 +103,9 @@ extern "C" int aif_rgb_merge_render(const uint8_t* const src[4], const int sp[4]
   if (dc != 1 && kinds[0] == 1 && kinds[1] == 1 && kinds[2] == 1 && (!src[3] || kinds[3] == 1)) {
     // All source planes are already available: pack the frame in one validated call.
     const vc_const_rgb_planes planes{{src[0], sp[0]}, {src[1], sp[1]}, {src[2], sp[2]}, {src[3], sp[3]}};
-    return layout(cpu)->pack_bgr(planes, {dst[0] + ptrdiff_t(h - 1) * dp[0], -ptrdiff_t(dp[0])},
-                                 bytes == 1 ? VC_U8 : VC_U16, dc, 0, {w, h, 0, h});
+    return pack_layout(cpu, bytes, dc, w, h)
+        ->pack_bgr(planes, {dst[0] + ptrdiff_t(h - 1) * dp[0], -ptrdiff_t(dp[0])}, bytes == 1 ? VC_U8 : VC_U16, dc, 0,
+                   {w, h, 0, h});
   }
   try {
     auto fn = layout(cpu);
@@ -109,7 +121,7 @@ extern "C" int aif_rgb_merge_render(const uint8_t* const src[4], const int sp[4]
     const auto* luma = measured_wide && avx2_available ? layout(AIF_RGB_MERGE_AVX2) : fn;
     const auto* unpack3 = rgb24_avx3 || rgb48_small ? layout(AIF_RGB_MERGE_AVX2) : fn;
     const auto* unpack4 = rgb24_avx3 && w <= 640 ? layout(AIF_RGB_MERGE_AVX2) : fn;
-    const auto* pack = rgb24_avx3 && dc == 3 ? layout(AIF_RGB_MERGE_AVX2) : fn;
+    const auto* pack = rgb24_avx3 && dc == 3 ? layout(AIF_RGB_MERGE_AVX2) : pack_layout(cpu, bytes, dc, w, h);
     size_t words = (size_t(rb) + 3) / 4;
     std::vector<uint32_t> scratch(words * 8, 0);
     vc_rows rows{w, 1, 0, 1};

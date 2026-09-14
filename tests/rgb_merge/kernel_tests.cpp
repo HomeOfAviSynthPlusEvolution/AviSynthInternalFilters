@@ -1,7 +1,31 @@
 #include "rgb_merge/kernel.h"
 #include <vector>
 #include <cstdio>
+bool large_pack() {
+  for (int bytes : {1, 2})
+    for (int kind : {1, 3}) {
+      const int w = 1921, h = 1080, spv = w * bytes * kind + 16, dpv = w * bytes * 4 + 16;
+      std::vector<uint8_t> source(size_t(spv) * h), output(size_t(dpv) * h, 71), reference = output;
+      for (size_t i = 0; i < source.size(); ++i)
+        source[i] = uint8_t(i * 37 + 19);
+      const uint8_t* src[] = {source.data(), source.data(), source.data(), nullptr};
+      int sp[] = {spv, spv, spv, spv}, kinds[] = {kind, kind, kind, kind}, dp[] = {dpv, dpv, dpv, dpv};
+      uint8_t* dst[] = {reference.data(), nullptr, nullptr, nullptr};
+      if (aif_rgb_merge_render(src, sp, kinds, dst, dp, w, h, bytes, 4, 0))
+        return false;
+      for (uint32_t cpu : {uint32_t(AIF_RGB_MERGE_AVX3_ZEN4), ~0u}) {
+        if (cpu != ~0u && !(cpu & aif_rgb_merge_supported_cpu()))
+          continue;
+        dst[0] = output.data();
+        if (aif_rgb_merge_render(src, sp, kinds, dst, dp, w, h, bytes, 4, cpu) || output != reference)
+          return false;
+      }
+    }
+  return true;
+}
 int main() {
+  if (!large_pack())
+    return 5;
   for (uint32_t cpu : {1u, 2u, 4u, 8u, 16u, 32u, 64u, 128u, 256u, 512u, ~0u}) {
     if (cpu != ~0u && !(cpu & aif_rgb_merge_supported_cpu()))
       continue;
