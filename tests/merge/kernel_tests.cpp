@@ -13,9 +13,9 @@ bool plan_policy() {
     return false;
   bool ok = true;
   // Reuse one immutable plan across the size/weight-dependent U16 fallback.
-  for (int width : {33, 1920, 33})
+  for (int width : {33, 960, 1920, 960, 33})
     for (double weight : {.5, .625}) {
-      const int height = width == 1920 ? 1080 : 3, pitch = width * 2;
+      const int height = width == 1920 ? 1080 : width == 960 ? 540 : 3, pitch = width * 2;
       std::vector<uint16_t> base(size_t(width) * height), source(base.size()), expected(base.size());
       const unsigned source_weight = weight == .5 ? 4 : 5;
       for (size_t i = 0; i < base.size(); ++i) {

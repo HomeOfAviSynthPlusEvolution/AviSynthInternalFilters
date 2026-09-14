@@ -66,7 +66,8 @@ aif_merge_plan select_plan(uint32_t cpu) {
   const auto target = cp_choose_target(mask);
   aif_merge_plan plan{cp_get_kernels(target), nullptr};
 #ifndef AIF_SCALAR_ONLY
-  // Preserve the measured large-U16 policy while resolving tables only once.
+  // AVX2 wins for U16 half-weight from the measured 540p size onward.
+  // Resolve once; SPR retains its full-width path.
   if ((target == HWY_AVX3 || target == HWY_AVX3_DL || target == HWY_AVX3_ZEN4) && (cp_supported_targets() & HWY_AVX2))
     plan.large_u16_half = cp_get_kernels(HWY_AVX2);
 #endif
@@ -86,7 +87,7 @@ int validate(int bp, int sp, int w, int h, int bits, int step, double weight) {
 int apply(const aif_merge_plan& plan, uint8_t* base, const uint8_t* source, int bp, int sp, int w, int h, int bits,
           int step, double weight) {
   const auto* fn = plan.primary;
-  if (plan.large_u16_half && bits == 16 && weight == .5 && uint64_t(w > 0 ? w : 0) * (h > 0 ? h : 0) >= 1920u * 1080u)
+  if (plan.large_u16_half && bits == 16 && weight == .5 && uint64_t(w > 0 ? w : 0) * (h > 0 ? h : 0) >= 960u * 540u)
     fn = plan.large_u16_half;
   cp_plane_config config{};
   config.format = {bits == 8 ? CP_U8 : bits == 32 ? CP_F32 : CP_U16, bits};
