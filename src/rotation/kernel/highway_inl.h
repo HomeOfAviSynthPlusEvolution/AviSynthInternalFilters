@@ -62,6 +62,8 @@ HWY_INLINE void TurnStream32(D tile, const uint8_t* s, uint8_t* d, int w, int h,
   for (; y + 16 <= h; y += 16) {
     int x = 0;
     for (; x + n <= w; x += n) {
+      // Finish each output cache line before starting the next one. Interleaving
+      // partial non-temporal writes can cause severe store-buffer stalls.
       hn::VFromD<D> output[16];
       const hn::CappedTag<uint32_t, 16> full;
       for (int group = 0; group < 16; group += n) {
@@ -71,7 +73,7 @@ HWY_INLINE void TurnStream32(D tile, const uint8_t* s, uint8_t* d, int w, int h,
             rows[i] = hn::LoadU(tile, reinterpret_cast<const uint32_t*>(s + ptrdiff_t(y + group + i) * sp) + x);
           TransposeStage<uint32_t, 1>(tile, rows);
           for (int i = 0; i < 4; ++i)
-            hn::Stream(rows[i], tile, reinterpret_cast<uint32_t*>(d + ptrdiff_t(x + i) * dp) + y + group);
+            output[group + i] = rows[i];
         } else {
           hn::VFromD<D> rows[8], t[8], q[8], columns[8];
           const hn::Repartition<uint64_t, D> wide;
@@ -94,10 +96,7 @@ HWY_INLINE void TurnStream32(D tile, const uint8_t* s, uint8_t* d, int w, int h,
             columns[i + 4] = hn::ConcatUpperUpper(tile, q[i + 4], q[i]);
           }
           for (int i = 0; i < 8; ++i) {
-            if constexpr (hn::MaxLanes(full) == 16)
-              output[group + i] = columns[i];
-            else
-              hn::Stream(columns[i], tile, reinterpret_cast<uint32_t*>(d + ptrdiff_t(x + i) * dp) + y + group);
+            output[group + i] = columns[i];
           }
         }
       }
@@ -105,6 +104,10 @@ HWY_INLINE void TurnStream32(D tile, const uint8_t* s, uint8_t* d, int w, int h,
         for (int i = 0; i < n; ++i)
           hn::Stream(hn::Combine(full, output[i + 8], output[i]), full,
                      reinterpret_cast<uint32_t*>(d + ptrdiff_t(x + i) * dp) + y);
+      else
+        for (int i = 0; i < n; ++i)
+          for (int group = 0; group < 16; group += n)
+            hn::Stream(output[group + i], tile, reinterpret_cast<uint32_t*>(d + ptrdiff_t(x + i) * dp) + y + group);
     }
     for (; x < w; ++x)
       for (int i = 0; i < 16; ++i)
