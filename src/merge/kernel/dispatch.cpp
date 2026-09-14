@@ -114,10 +114,3 @@ extern "C" int aif_merge_mix_with_plan(const aif_merge_plan* plan, uint8_t* base
     return status;
   return apply(*plan, base, source, bp, sp, w, h, bits, step, weight);
 }
-extern "C" int aif_merge_mix(uint8_t* base, const uint8_t* source, int bp, int sp, int w, int h, int bits, int step,
-                             double weight, uint32_t cpu) {
-  const int status = validate(bp, sp, w, h, bits, step, weight);
-  if (status || w == 0 || h == 0)
-    return status;
-  return apply(select_plan(cpu), base, source, bp, sp, w, h, bits, step, weight);
-}

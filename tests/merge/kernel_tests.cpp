@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstring>
 #include <cstdio>
+#include <memory>
 bool plan_policy() {
   if (!aif_merge_create(0, nullptr) || !aif_merge_mix_with_plan(nullptr, nullptr, nullptr, 0, 0, 0, 0, 8, 1, .5))
     return false;
@@ -15,18 +16,17 @@ bool plan_policy() {
   for (int width : {33, 1920, 33})
     for (double weight : {.5, .625}) {
       const int height = width == 1920 ? 1080 : 3, pitch = width * 2;
-      std::vector<uint16_t> base(size_t(width) * height), source(base.size()), legacy;
+      std::vector<uint16_t> base(size_t(width) * height), source(base.size()), expected(base.size());
+      const unsigned source_weight = weight == .5 ? 4 : 5;
       for (size_t i = 0; i < base.size(); ++i) {
         base[i] = uint16_t(i * 37);
         source[i] = uint16_t(i * 19 + 11);
+        expected[i] = uint16_t(((8 - source_weight) * base[i] + source_weight * source[i] + 4) / 8);
       }
-      legacy = base;
-      ok &= !aif_merge_mix(reinterpret_cast<uint8_t*>(legacy.data()), reinterpret_cast<uint8_t*>(source.data()), pitch,
-                           pitch, width, height, 16, 2, weight, ~0u);
       ok &= !aif_merge_mix_with_plan(plan, reinterpret_cast<uint8_t*>(base.data()),
                                      reinterpret_cast<uint8_t*>(source.data()), pitch, pitch, width, height, 16, 2,
                                      weight);
-      ok &= base == legacy;
+      ok &= base == expected;
     }
   uint8_t base = 17, source = 29;
   ok &= aif_merge_mix_with_plan(plan, &base, &source, 1, 1, 1, 1, 7, 1, .5) != 0 && base == 17;
@@ -40,6 +40,11 @@ int main(int argc, char** argv) {
     return 10;
   if (argc > 1 && std::strcmp(argv[1], "plan") == 0)
     return 0;
+  aif_merge_plan* scalar = nullptr;
+  if (aif_merge_create(0, &scalar))
+    return 7;
+  const std::unique_ptr<aif_merge_plan, decltype(&aif_merge_destroy)> scalar_plan(scalar, aif_merge_destroy);
+  const uint32_t supported = aif_merge_supported_cpu();
   const bool half_only = argc > 1 && std::strcmp(argv[1], "u8-half") == 0;
   for (int bits : {8, 10, 12, 14, 16, 32})
     for (int w : {1, 7, 15, 16, 17, 31, 32, 33, 63, 64, 65, 255, 256, 257, 511, 512, 513})
@@ -48,7 +53,7 @@ int main(int argc, char** argv) {
           for (double weight : {0., .0039, .25, .499, .5, .7, 1.}) {
             if (half_only && (bits != 8 || weight != .5))
               continue;
-            if (cpu && cpu != ~0u && !(cpu & aif_merge_supported_cpu()))
+            if (cpu && cpu != ~0u && !(cpu & supported))
               continue;
             int bytes = bits == 8 ? 1 : bits == 32 ? 4 : 2;
             if (step == 2 && bits != 8)
@@ -79,15 +84,11 @@ int main(int argc, char** argv) {
             aif_merge_plan* plan = nullptr;
             if (aif_merge_create(cpu, &plan))
               return 7;
-            auto legacy = store;
-            if (aif_merge_mix(reinterpret_cast<uint8_t*>(legacy.data()), s, pitch, pitch, w, h, bits, stride, weight,
-                              cpu))
-              return 8;
             const int planned = aif_merge_mix_with_plan(plan, d, s, pitch, pitch, w, h, bits, stride, weight);
             aif_merge_destroy(plan);
-            if (planned || legacy != simd)
+            if (planned)
               return 9;
-            if (aif_merge_mix(r, s, pitch, pitch, w, h, bits, stride, weight, 0))
+            if (aif_merge_mix_with_plan(scalar_plan.get(), r, s, pitch, pitch, w, h, bits, stride, weight))
               return 1;
             for (int y = 0; y < h; ++y) {
               for (int x = 0; x < w; ++x) {

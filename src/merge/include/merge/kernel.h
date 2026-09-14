@@ -23,16 +23,13 @@ uint32_t aif_merge_supported_cpu(void);
  * a no-op. Weight finite [0,1]. Composite's integer SIMD opacity quantization
  * can differ from its scalar result by 1 LSB; float follows Composite rules. */
 /* Immutable CPU policy, resolved once per filter. Safe for concurrent calls
- * on disjoint frames. Processing has the same bounds and arithmetic as mix.
+ * on disjoint frames. Processing follows the bounds and arithmetic above.
  * The caller owns the plan; destroy accepts null. */
 typedef struct aif_merge_plan aif_merge_plan;
 int aif_merge_create(uint32_t cpu, aif_merge_plan** out);
 void aif_merge_destroy(aif_merge_plan* plan);
 int aif_merge_mix_with_plan(const aif_merge_plan* plan, uint8_t* base, const uint8_t* source, int bp, int sp, int width,
                             int height, int bits, int step, double weight);
-/* Compatibility entry point: resolves the CPU policy on each call. */
-int aif_merge_mix(uint8_t* base, const uint8_t* source, int bp, int sp, int width, int height, int bits, int step,
-                  double weight, uint32_t cpu);
 #ifdef __cplusplus
 }
 #endif

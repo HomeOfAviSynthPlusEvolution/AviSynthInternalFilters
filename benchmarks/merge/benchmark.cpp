@@ -7,6 +7,8 @@
 #include <vector>
 #include <cstring>
 #include <cmath>
+#include <memory>
+#include <utility>
 #if defined(_WIN32)
 #define NOMINMAX
 #include <windows.h>
@@ -23,6 +25,12 @@ int main() {
   const Target targets[] = {{"C", 0},           {"SSE2", 1},       {"SSSE3", 2},     {"NEON", 4},
                             {"SSE4", 8},        {"AVX2", 16},      {"AVX3", 32},     {"AVX3_DL", 64},
                             {"AVX3_ZEN4", 128}, {"AVX3_SPR", 256}, {"AVX10_2", 512}, {"auto", ~0u}};
+  using Plan = std::unique_ptr<aif_merge_plan, decltype(&aif_merge_destroy)>;
+  aif_merge_plan* scalar = nullptr;
+  if (aif_merge_create(0, &scalar))
+    return 1;
+  const Plan scalar_plan(scalar, aif_merge_destroy);
+  const uint32_t supported = aif_merge_supported_cpu();
   std::puts("width,height,bits,layout,target,median_us");
   for (int w : {960, 1920})
     for (int bits : {8, 16, 32})
@@ -59,8 +67,8 @@ int main() {
           auto reset = [&] {
             std::copy(original.begin(), original.end(), d.begin());
           };
-          auto apply = [&](uint8_t* dst, uint32_t cpu) {
-            return aif_merge_mix(dst, src.data(), pitch, pitch, w, h, bits, bytes * step, weight, cpu);
+          auto apply = [&](uint8_t* dst, const aif_merge_plan* plan) {
+            return aif_merge_mix_with_plan(plan, dst, src.data(), pitch, pitch, w, h, bits, bytes * step, weight);
           };
           auto equal = [&] {
             for (int y = 0; y < h; ++y)
@@ -87,20 +95,25 @@ int main() {
               }
             return d.back() == 0xAD;
           };
-          if (apply(expected_ptr, 0))
+          if (apply(expected_ptr, scalar_plan.get()))
             return 1;
           struct Run {
             Target target;
+            Plan plan;
             std::array<double, 7> times;
           };
           std::vector<Run> runs;
           for (const auto& t : targets) {
-            if (t.mask && t.mask != ~0u && !(t.mask & aif_merge_supported_cpu()))
+            if (t.mask && t.mask != ~0u && !(t.mask & supported))
               continue;
+            aif_merge_plan* created = nullptr;
+            if (aif_merge_create(t.mask, &created))
+              return 1;
+            Plan plan(created, aif_merge_destroy);
             reset();
-            if (apply(actual_ptr, t.mask) || !equal())
+            if (apply(actual_ptr, plan.get()) || !equal())
               return 2;
-            runs.push_back({t, {}});
+            runs.push_back({t, std::move(plan), {}});
           }
           // Rotate target order each round to reduce systematic thermal/order bias.
           for (size_t round = 0; round < 7; ++round)
@@ -108,14 +121,14 @@ int main() {
               auto& run = runs[(j + round) % runs.size()];
               for (int warmup = 0; warmup < 2; ++warmup) {
                 reset();
-                if (apply(actual_ptr, run.target.mask))
+                if (apply(actual_ptr, run.plan.get()))
                   return 3;
               }
               double elapsed = 0;
               for (int i = 0; i < 4; ++i) {
                 reset();
                 const auto start = std::chrono::steady_clock::now();
-                if (apply(actual_ptr, run.target.mask))
+                if (apply(actual_ptr, run.plan.get()))
                   return 3;
                 elapsed += std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - start).count();
               }
