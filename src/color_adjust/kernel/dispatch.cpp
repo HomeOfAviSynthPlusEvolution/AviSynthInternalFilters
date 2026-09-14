@@ -34,6 +34,13 @@ extern "C" int aif_color_adjust_map(uint8_t* dst, int dp, const uint8_t* src, in
     std::vector<uint32_t> table(size_t(1) << bits);
     for (size_t i = 0; i < table.size(); ++i)
       table[i] = size == 1 ? static_cast<const uint8_t*>(lut)[i] : static_cast<const uint16_t*>(lut)[i];
+    // On SPR, the measured 14-bit gather path favors AVX2; narrowing SPR's
+    // vectors alone does not help. Keep other bit depths and newer targets.
+    const uint32_t supported = aif_color_adjust_supported_cpu();
+    const uint32_t higher = AIF_COLOR_ADJUST_AVX3_SPR | AIF_COLOR_ADJUST_AVX10_2;
+    if (bits == 14 && step == 1 && ((cpu & supported) & higher) == AIF_COLOR_ADJUST_AVX3_SPR &&
+        (supported & AIF_COLOR_ADJUST_AVX2))
+      cpu = AIF_COLOR_ADJUST_AVX2;
     auto fn = aif::color_adjust::backend(cpu);
     if (!fn)
       fn = aif::color_adjust::scalar;
