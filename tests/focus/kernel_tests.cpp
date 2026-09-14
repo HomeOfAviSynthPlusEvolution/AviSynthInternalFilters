@@ -272,6 +272,41 @@ void vertical_sharpen_extremes() {
   }
 }
 
+void horizontal_sharpen_extremes() {
+  const auto supported = aif_focus_supported_cpu();
+  for (uint32_t cpu : {1u, 3u, 7u, 15u}) {
+    if ((cpu & supported) != cpu)
+      continue;
+    for (int width : {15, 16, 17, 31, 32, 33, 63, 64, 65})
+      for (int half : {32768, 48901, 65536}) {
+        Buffer src(width, 3), actual(width, 3);
+        for (int y = 0; y < 3; ++y)
+          for (int x = 0; x < width; ++x)
+            src.data[y * src.stride + x] = uint8_t(x % 3 == 0 ? 0 : x % 3 == 1 ? 255 : (x * 7919 + y * 17389) & 255);
+        const auto source_before = src.storage;
+        check(aif_focus_horizontal(src.data, src.stride, actual.data, actual.stride, width, 3, 8, AIF_FOCUS_PLANAR,
+                                   half, half / 32768.0f, cpu) == 0,
+              "horizontal sharpening status");
+        const int block = (cpu & 8) && width > 32 ? 32 : (cpu & 1) && width > 16 ? 16 : 0;
+        const int prefix = block ? width / block * block : 0;
+        for (int y = 0; y < 3; ++y)
+          for (int x = 0; x < width; ++x) {
+            const auto* line = src.data + y * src.stride;
+            const int weight = x < prefix ? ((half + 256) >> 9) * 512 : half;
+            const int64_t outer = int64_t(line[std::max(0, x - 1)]) + line[std::min(width - 1, x + 1)];
+            const auto expected = std::clamp((2 * int64_t(line[x]) * weight + outer * (32768 - weight) + 32768) >> 16,
+                                             int64_t(0), int64_t(255));
+            check(actual.data[y * actual.stride + x] == expected, "horizontal sharpening prefix and tail");
+          }
+        for (int y = 0; y < 3; ++y)
+          check(std::all_of(actual.data + y * actual.stride + width, actual.data + (y + 1) * actual.stride,
+                            [](uint8_t v) { return v == 0xA5; }),
+                "horizontal sharpening row padding");
+        check(src.storage == source_before && src.guards() && actual.guards(), "horizontal sharpening guards");
+      }
+  }
+}
+
 void wide_sad() {
   constexpr int width = 4096, height = 2160;
   Buffer a(width, height), b(width, height);
@@ -316,6 +351,7 @@ int main() {
     invalid_inputs();
     native_adjustment_boundaries();
     vertical_sharpen_extremes();
+    horizontal_sharpen_extremes();
     wide_sad();
     concurrent_calls();
     std::printf("%d checks passed; CPU mask %u\n", checks, aif_focus_supported_cpu());

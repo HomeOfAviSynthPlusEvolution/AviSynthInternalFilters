@@ -195,7 +195,8 @@ void HorizontalSegment(const T* src, T* dst, size_t width, size_t begin, size_t 
     const hn::ScalableTag<uint8_t> packed;
     const auto zero = hn::Zero(packed);
     const size_t batch = hn::Lanes(packed);
-    for (; x + batch <= interior; x += batch) {
+    const auto process = [&](size_t pos) HWY_ATTR {
+      const size_t x = pos;
       const auto c = hn::LoadU(packed, src + x);
       const auto l = hn::LoadU(packed, src + x - distance);
       const auto r = hn::LoadU(packed, src + x + distance);
@@ -206,6 +207,16 @@ void HorizontalSegment(const T* src, T* dst, size_t width, size_t begin, size_t 
                                    hn::BitCast(d, hn::InterleaveUpper(packed, l, zero)),
                                    hn::BitCast(d, hn::InterleaveUpper(packed, r, zero)), half, amount, peak);
       hn::StoreU(hn::ReorderDemote2To(packed, lo, hi), packed, dst + x);
+    };
+    for (; x + batch <= interior; x += batch)
+      process(x);
+    if constexpr (Layout == AIF_FOCUS_PLANAR) {
+      // Source and destination are disjoint: overlap the last full interior
+      // vector to avoid a long scalar tail without reading outside the row.
+      if (x < interior && interior >= batch + distance && interior - batch >= begin) {
+        process(interior - batch);
+        x = interior;
+      }
     }
   }
 #endif
