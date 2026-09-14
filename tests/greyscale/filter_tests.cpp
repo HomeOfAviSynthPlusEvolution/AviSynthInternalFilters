@@ -180,6 +180,10 @@ void compare(IScriptEnvironment* env, const char* name, const std::vector<AVSVal
     }
     int error = 0;
     for (const char* key : {"_ColorRange", "_Matrix"}) {
+      // Upstream preserves RGB range metadata even when the numeric range changes.
+      // Validate our output range below instead of copying that reference behavior.
+      if (vi.IsRGB() && std::strcmp(key, "_ColorRange") == 0)
+        continue;
       int ea = 0, eb = 0;
       auto va = env->propGetInt(env->getFramePropsRO(a), key, 0, &ea);
       auto vb = env->propGetInt(env->getFramePropsRO(b), key, 0, &eb);
@@ -187,6 +191,21 @@ void compare(IScriptEnvironment* env, const char* name, const std::vector<AVSVal
         std::fprintf(stderr, "%s: old=%lld error=%d new=%lld error=%d\n", key, static_cast<long long>(va), ea,
                      static_cast<long long>(vb), eb);
       require(ea == eb && (ea || va == vb), "color metadata differs");
+    }
+    if (vi.IsRGB()) {
+      int source_error = 0;
+      auto source_frame = source->GetFrame(n, env);
+      int expected_range = int(env->propGetInt(env->getFramePropsRO(source_frame), "_ColorRange", 0, &source_error));
+      if (source_error)
+        expected_range = 0;
+      const std::string matrix = args.size() > 1 ? args[1].AsString() : "";
+      if (matrix == "Rec601" || matrix == "Rec709" || matrix == "Rec2020" || matrix == "601:limited" ||
+          matrix == "709:limited")
+        expected_range = 1;
+      else if (matrix == "709:full")
+        expected_range = 0;
+      const auto actual_range = env->propGetInt(env->getFramePropsRO(b), "_ColorRange", 0, &error);
+      require(!error && actual_range == expected_range, "output color range differs from numeric range");
     }
     require(env->propGetInt(env->getFramePropsRO(b), "AIFTest", 0, &error) == 700 + n && !error,
             "frame properties lost");
