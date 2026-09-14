@@ -123,6 +123,12 @@ void Typed(const uint8_t* s, uint8_t* d, int row, int h, int sp, int dp, int op)
   const hn::CappedTag<T, 16 / sizeof(T)> tag;
   const int lanes = int(hn::Lanes(tag));
   if (op >= 2) {
+#if HWY_TARGET == HWY_AVX3_ZEN4 && !defined(HWY_DISABLE_CACHE_CONTROL)
+    // Zen 4 benefits from complete-line streaming here; SPR measurements
+    // regress despite fewer RFOs. Keep other targets on cached stores.
+    const bool stream = sizeof(T) == 4 && op == 2 && size_t(w) * h >= 1920u * 1080u &&
+                        (reinterpret_cast<uintptr_t>(d) & 63) == 0 && dp % 64 == 0 && row % 64 == 0;
+#endif
     for (int y = 0; y < h; ++y) {
       const T* src = reinterpret_cast<const T*>(s + ptrdiff_t(y) * sp);
       T* dst = reinterpret_cast<T*>(d + ptrdiff_t(op == 3 ? y : h - 1 - y) * dp);
@@ -136,10 +142,20 @@ void Typed(const uint8_t* s, uint8_t* d, int row, int h, int sp, int dp, int op)
         const auto b = hn::Reverse(tag, hn::LoadU(tag, src + x + lanes));
         const auto c = hn::Reverse(tag, hn::LoadU(tag, src + x + 2 * lanes));
         const auto e = hn::Reverse(tag, hn::LoadU(tag, src + x + 3 * lanes));
-        hn::StoreU(e, tag, dst + w - x - 4 * lanes);
-        hn::StoreU(c, tag, dst + w - x - 3 * lanes);
-        hn::StoreU(b, tag, dst + w - x - 2 * lanes);
-        hn::StoreU(a, tag, dst + w - x - lanes);
+#if HWY_TARGET == HWY_AVX3_ZEN4 && !defined(HWY_DISABLE_CACHE_CONTROL)
+        if (stream) {
+          hn::Stream(e, tag, dst + w - x - 4 * lanes);
+          hn::Stream(c, tag, dst + w - x - 3 * lanes);
+          hn::Stream(b, tag, dst + w - x - 2 * lanes);
+          hn::Stream(a, tag, dst + w - x - lanes);
+        } else
+#endif
+        {
+          hn::StoreU(e, tag, dst + w - x - 4 * lanes);
+          hn::StoreU(c, tag, dst + w - x - 3 * lanes);
+          hn::StoreU(b, tag, dst + w - x - 2 * lanes);
+          hn::StoreU(a, tag, dst + w - x - lanes);
+        }
       }
       for (; x + lanes <= w; x += lanes) {
         const auto v = hn::LoadU(tag, src + x);
@@ -148,6 +164,10 @@ void Typed(const uint8_t* s, uint8_t* d, int row, int h, int sp, int dp, int op)
       for (; x < w; ++x)
         dst[w - 1 - x] = src[x];
     }
+#if HWY_TARGET == HWY_AVX3_ZEN4 && !defined(HWY_DISABLE_CACHE_CONTROL)
+    if (stream)
+      hwy::FlushStream();
+#endif
     return;
   }
   if (op == 1) {
