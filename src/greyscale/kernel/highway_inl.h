@@ -36,6 +36,29 @@ void FillRow(uint8_t* dst, int bytes, const uint8_t* pattern, int size) {
       break;
   }
 }
+// Full-range planar F32: keep the matrix's B,G,R multiply/add order,
+// and reuse each luma vector for all three output planes.
+void FloatRgbRows(uint8_t* const* data, const int* pitch, int width, int height, float kr, float kg, float kb) {
+  const hn::ScalableTag<float> d;
+  const int n = int(hn::Lanes(d));
+  for (int y = 0; y < height; ++y) {
+    auto* r = reinterpret_cast<float*>(data[0] + ptrdiff_t(y) * pitch[0]);
+    auto* g = reinterpret_cast<float*>(data[1] + ptrdiff_t(y) * pitch[1]);
+    auto* b = reinterpret_cast<float*>(data[2] + ptrdiff_t(y) * pitch[2]);
+    int x = 0;
+    for (; x <= width - n; x += n) {
+      auto luma = hn::Add(hn::Mul(hn::LoadU(d, b + x), hn::Set(d, kb)), hn::Mul(hn::LoadU(d, g + x), hn::Set(d, kg)));
+      luma = hn::Add(hn::Add(luma, hn::Mul(hn::LoadU(d, r + x), hn::Set(d, kr))), hn::Zero(d));
+      hn::StoreU(luma, d, r + x);
+      hn::StoreU(luma, d, g + x);
+      hn::StoreU(luma, d, b + x);
+    }
+    for (; x < width; ++x) {
+      const float luma = (b[x] * kb + g[x] * kg + r[x] * kr) + 0.f;
+      r[x] = g[x] = b[x] = luma;
+    }
+  }
+}
 } // namespace HWY_NAMESPACE
 } // namespace aif::greyscale
 HWY_AFTER_NAMESPACE();

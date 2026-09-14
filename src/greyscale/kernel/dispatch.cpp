@@ -15,6 +15,8 @@ struct aif_greyscale_plan {
   const vc_layout_functions* packed_layout = nullptr;
   int fallback_components = 0;
   int bytes = 0;
+  aif::greyscale::FloatRgb float_rgb = nullptr;
+  float kr = 0, kg = 0, kb = 0;
   ~aif_greyscale_plan() {
     vc_matrix_destroy(matrix);
     vc_matrix_destroy(packed_matrix);
@@ -85,6 +87,13 @@ extern "C" int aif_greyscale_create(double kr, double kb, int bits, int sf, int 
     }
 #endif
     p->bytes = bits == 8 ? 1 : bits == 32 ? 4 : 2;
+    if (bits == 32 && sf && df) {
+      if (const auto* kernels = aif::greyscale::backend(cpu))
+        p->float_rgb = kernels->float_rgb;
+      p->kr = float(kr);
+      p->kg = float(1.0 - kr - kb);
+      p->kb = float(kb);
+    }
     *out = p.release();
     return VC_OK;
   } catch (...) {
@@ -105,6 +114,10 @@ extern "C" int aif_greyscale_rgb(const aif_greyscale_plan* p, uint8_t* const dat
     if (!data[i] || pitch[i] < rb * (packed ? components : 1) || pitch[i] % p->bytes ||
         reinterpret_cast<uintptr_t>(data[i]) % p->bytes)
       return VC_INVALID_ARGUMENT;
+  if (!packed && p->float_rgb) {
+    p->float_rgb(data, pitch, w, h, p->kr, p->kg, p->kb);
+    return VC_OK;
+  }
   const bool use_packed = packed && components == p->fallback_components && p->packed_matrix;
   const auto* matrix = use_packed ? p->packed_matrix : p->matrix;
   const auto* layout = use_packed ? p->packed_layout : p->layout;
@@ -161,7 +174,8 @@ extern "C" int aif_greyscale_chroma(uint8_t* data, int pitch, int w, int h, int 
       reinterpret_cast<uintptr_t>(data) % bytes)
     return VC_INVALID_ARGUMENT;
   uint32_t value = bits == 32 ? 0 : 1u << (bits - 1);
-  auto fill = aif::greyscale::backend(cpu);
+  const auto* kernels = aif::greyscale::backend(cpu);
+  auto fill = kernels ? kernels->fill : nullptr;
   if (!fill)
     fill = aif::greyscale::scalar;
   for (int y = 0; y < h; ++y)

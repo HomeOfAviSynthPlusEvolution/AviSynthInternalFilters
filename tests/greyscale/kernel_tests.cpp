@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "greyscale/kernel.h"
 #include <cstring>
+#include <cmath>
+#include <limits>
 #include <cstdio>
 #include <stdexcept>
 #include <vector>
@@ -8,11 +10,45 @@ void check(bool ok) {
   if (!ok)
     throw std::runtime_error("greyscale kernel failure");
 }
+void float_specials(uint32_t cpu) {
+  constexpr int width = 65, stride = 72, height = 2, plane = stride * height;
+  const float values[] = {0.f,
+                          -0.f,
+                          -4.f,
+                          100.f,
+                          .12345f,
+                          std::numeric_limits<float>::infinity(),
+                          -std::numeric_limits<float>::infinity(),
+                          std::numeric_limits<float>::quiet_NaN()};
+  for (double kr : {0., .299, .2126}) {
+    std::vector<float> a(plane * 3, 19.f), b;
+    for (int c = 0; c < 3; ++c)
+      for (int y = 0; y < height; ++y)
+        for (int x = 0; x < width; ++x)
+          a[c * plane + y * stride + x] = values[(x + 3 * c + y) % 8];
+    b = a;
+    for (int mode = 0; mode < 2; ++mode) {
+      auto& storage = mode ? b : a;
+      uint8_t* data[] = {reinterpret_cast<uint8_t*>(storage.data()), reinterpret_cast<uint8_t*>(storage.data() + plane),
+                         reinterpret_cast<uint8_t*>(storage.data() + 2 * plane)};
+      int pitches[] = {stride * 4, stride * 4, stride * 4};
+      aif_greyscale_plan* plan = nullptr;
+      check(!aif_greyscale_create(kr, .0722, 32, 1, 1, mode ? cpu : 0, &plan));
+      const int result = aif_greyscale_rgb(plan, data, pitches, width, height, 0, 3);
+      aif_greyscale_destroy(plan);
+      check(!result);
+    }
+    for (size_t i = 0; i < a.size(); ++i)
+      check(a[i] == b[i] || (std::isnan(a[i]) && std::isnan(b[i])));
+  }
+}
+
 int main() {
   try {
     for (uint32_t cpu : {1u, 2u, 4u, 8u, 16u, 32u, 64u, 128u, 256u, 512u, ~0u}) {
       if (cpu != ~0u && !(cpu & aif_greyscale_supported_cpu()))
         continue;
+      float_specials(cpu);
       for (int width : {2, 30, 32, 34, 62, 64, 66}) {
         const int pitch = width * 2 + 17;
         std::vector<uint8_t> expected(pitch * 3, 0x71), actual = expected;
