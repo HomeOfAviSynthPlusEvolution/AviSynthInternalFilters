@@ -16,6 +16,7 @@ struct aif_greyscale_plan {
   int fallback_components = 0;
   int bytes = 0;
   aif::greyscale::FloatRgb float_rgb = nullptr;
+  aif::greyscale::PackGray pack_gray = nullptr;
   float kr = 0, kg = 0, kb = 0;
   ~aif_greyscale_plan() {
     vc_matrix_destroy(matrix);
@@ -86,6 +87,9 @@ extern "C" int aif_greyscale_create(double kr, double kb, int bits, int sf, int 
       p->packed_layout = vc_get_layout_functions(fallback);
     }
 #endif
+    if (bits == 8)
+      if (const auto* kernels = aif::greyscale::backend(cpu))
+        p->pack_gray = kernels->pack_gray;
     p->bytes = bits == 8 ? 1 : bits == 32 ? 4 : 2;
     if (bits == 32 && sf && df) {
       if (const auto* kernels = aif::greyscale::backend(cpu))
@@ -122,8 +126,9 @@ extern "C" int aif_greyscale_rgb(const aif_greyscale_plan* p, uint8_t* const dat
   const auto* matrix = use_packed ? p->packed_matrix : p->matrix;
   const auto* layout = use_packed ? p->packed_layout : p->layout;
   try {
+    const bool pack_gray = packed && components == 4 && p->pack_gray;
     const size_t words = (size_t(rb) + 3) / 4;
-    std::vector<uint32_t> scratch(packed ? words * 5 : 0);
+    std::vector<uint32_t> scratch(packed ? words * (pack_gray ? 4 : 5) : 0);
     vc_plane yplane{scratch.data(), rb};
     const vc_rows rows{w, 1, 0, 1};
     for (int y = 0; y < h; ++y) {
@@ -131,7 +136,8 @@ extern "C" int aif_greyscale_rgb(const aif_greyscale_plan* p, uint8_t* const dat
       vc_plane a{};
       if (packed) {
         vc_plane r{scratch.data() + words, rb}, g{scratch.data() + words * 2, rb}, b{scratch.data() + words * 3, rb};
-        a = {scratch.data() + words * 4, rb};
+        if (!pack_gray)
+          a = {scratch.data() + words * 4, rb};
         int s = layout->unpack_bgr({data[0] + ptrdiff_t(y) * pitch[0], pitch[0]}, {r, g, b, a},
                                    p->bytes == 1 ? VC_U8 : VC_U16, components, 0, rows);
         if (s)
@@ -147,7 +153,9 @@ extern "C" int aif_greyscale_rgb(const aif_greyscale_plan* p, uint8_t* const dat
       int s = vc_matrix_rgb_to_y(matrix, rgb, yplane, rows);
       if (s)
         return s;
-      if (packed) {
+      if (pack_gray) {
+        p->pack_gray(data[0] + ptrdiff_t(y) * pitch[0], static_cast<const uint8_t*>(yplane.data), w);
+      } else if (packed) {
         vc_const_plane l{yplane.data, yplane.stride};
         s = layout->pack_bgr({l, l, l, {a.data, a.stride}}, {data[0] + ptrdiff_t(y) * pitch[0], pitch[0]},
                              p->bytes == 1 ? VC_U8 : VC_U16, components, 0, rows);

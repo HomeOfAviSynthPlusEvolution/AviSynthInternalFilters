@@ -64,61 +64,67 @@ const aif::greyscale::Backend* aif::greyscale::backend(uint32_t cpu) {
 #ifndef AIF_SCALAR_ONLY
 #if HWY_TARGETS & HWY_AVX10_2
   if (cpu & AIF_GREYSCALE_AVX10_2) {
-    static const Backend kernels{HWY_CHOOSE_AVX10_2(FillRow), HWY_CHOOSE_AVX10_2(FloatRgbRows)};
+    static const Backend kernels{HWY_CHOOSE_AVX10_2(FillRow), HWY_CHOOSE_AVX10_2(FloatRgbRows),
+                                 HWY_CHOOSE_AVX10_2(PackGrayRow)};
     return &kernels;
   }
 #endif
 #if HWY_TARGETS & HWY_AVX3_SPR
   if (cpu & AIF_GREYSCALE_AVX3_SPR) {
-    static const Backend kernels{HWY_CHOOSE_AVX3_SPR(FillRow), HWY_CHOOSE_AVX3_SPR(FloatRgbRows)};
+    static const Backend kernels{HWY_CHOOSE_AVX3_SPR(FillRow), HWY_CHOOSE_AVX3_SPR(FloatRgbRows),
+                                 HWY_CHOOSE_AVX3_SPR(PackGrayRow)};
     return &kernels;
   }
 #endif
 #if HWY_TARGETS & HWY_AVX3_ZEN4
   if (cpu & AIF_GREYSCALE_AVX3_ZEN4) {
-    static const Backend kernels{HWY_CHOOSE_AVX3_ZEN4(FillRow), HWY_CHOOSE_AVX3_ZEN4(FloatRgbRows)};
+    static const Backend kernels{HWY_CHOOSE_AVX3_ZEN4(FillRow), HWY_CHOOSE_AVX3_ZEN4(FloatRgbRows),
+                                 HWY_CHOOSE_AVX3_ZEN4(PackGrayRow)};
     return &kernels;
   }
 #endif
 #if HWY_TARGETS & HWY_AVX3_DL
   if (cpu & AIF_GREYSCALE_AVX3_DL) {
-    static const Backend kernels{HWY_CHOOSE_AVX3_DL(FillRow), HWY_CHOOSE_AVX3_DL(FloatRgbRows)};
+    static const Backend kernels{HWY_CHOOSE_AVX3_DL(FillRow), HWY_CHOOSE_AVX3_DL(FloatRgbRows),
+                                 HWY_CHOOSE_AVX3_DL(PackGrayRow)};
     return &kernels;
   }
 #endif
 #if HWY_TARGETS & HWY_AVX3
   if (cpu & AIF_GREYSCALE_AVX3) {
-    static const Backend kernels{HWY_CHOOSE_AVX3(FillRow), HWY_CHOOSE_AVX3(FloatRgbRows)};
+    static const Backend kernels{HWY_CHOOSE_AVX3(FillRow), HWY_CHOOSE_AVX3(FloatRgbRows), HWY_CHOOSE_AVX3(PackGrayRow)};
     return &kernels;
   }
 #endif
 #if HWY_TARGETS & HWY_AVX2
   if (cpu & AIF_GREYSCALE_AVX2) {
-    static const Backend kernels{HWY_CHOOSE_AVX2(FillRow), HWY_CHOOSE_AVX2(FloatRgbRows)};
+    static const Backend kernels{HWY_CHOOSE_AVX2(FillRow), HWY_CHOOSE_AVX2(FloatRgbRows), HWY_CHOOSE_AVX2(PackGrayRow)};
     return &kernels;
   }
 #endif
 #if HWY_TARGETS & HWY_SSE4
   if (cpu & AIF_GREYSCALE_SSE4) {
-    static const Backend kernels{HWY_CHOOSE_SSE4(FillRow), HWY_CHOOSE_SSE4(FloatRgbRows)};
+    static const Backend kernels{HWY_CHOOSE_SSE4(FillRow), HWY_CHOOSE_SSE4(FloatRgbRows), HWY_CHOOSE_SSE4(PackGrayRow)};
     return &kernels;
   }
 #endif
 #if HWY_TARGETS & HWY_SSSE3
   if (cpu & AIF_GREYSCALE_SSSE3) {
-    static const Backend kernels{HWY_CHOOSE_SSSE3(FillRow), HWY_CHOOSE_SSSE3(FloatRgbRows)};
+    // AMD measurements favor the existing generic packer on SSE2/SSSE3.
+    static const Backend kernels{HWY_CHOOSE_SSSE3(FillRow), HWY_CHOOSE_SSSE3(FloatRgbRows), nullptr};
     return &kernels;
   }
 #endif
 #if HWY_TARGETS & HWY_SSE2
   if (cpu & AIF_GREYSCALE_SSE2) {
-    static const Backend kernels{HWY_CHOOSE_SSE2(FillRow), HWY_CHOOSE_SSE2(FloatRgbRows)};
+    static const Backend kernels{HWY_CHOOSE_SSE2(FillRow), HWY_CHOOSE_SSE2(FloatRgbRows), nullptr};
     return &kernels;
   }
 #endif
 #if HWY_TARGETS & HWY_NEON_WITHOUT_AES
   if (cpu & AIF_GREYSCALE_NEON) {
-    static const Backend kernels{HWY_CHOOSE_NEON_WITHOUT_AES(FillRow), HWY_CHOOSE_NEON_WITHOUT_AES(FloatRgbRows)};
+    static const Backend kernels{HWY_CHOOSE_NEON_WITHOUT_AES(FillRow), HWY_CHOOSE_NEON_WITHOUT_AES(FloatRgbRows),
+                                 HWY_CHOOSE_NEON_WITHOUT_AES(PackGrayRow)};
     return &kernels;
   }
 #endif

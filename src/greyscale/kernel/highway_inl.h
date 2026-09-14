@@ -36,6 +36,24 @@ void FillRow(uint8_t* dst, int bytes, const uint8_t* pattern, int size) {
       break;
   }
 }
+// Replicate luma while keeping alpha in the original packed pixel.
+void PackGrayRow(uint8_t* dst, const uint8_t* luma, int width) {
+  int x = 0;
+#if HWY_IS_LITTLE_ENDIAN
+  const hn::ScalableTag<uint32_t> d;
+  const hn::Rebind<uint8_t, decltype(d)> bytes;
+  const int n = int(hn::Lanes(d));
+  for (; x <= width - n; x += n) {
+    const auto y = hn::PromoteTo(d, hn::LoadU(bytes, luma + x));
+    const auto rgb = hn::Or(y, hn::Or(hn::ShiftLeft<8>(y), hn::ShiftLeft<16>(y)));
+    const auto alpha = hn::And(hn::LoadU(d, reinterpret_cast<const uint32_t*>(dst) + x), hn::Set(d, 0xFF000000u));
+    hn::StoreU(hn::Or(rgb, alpha), d, reinterpret_cast<uint32_t*>(dst) + x);
+  }
+#endif
+  for (; x < width; ++x)
+    dst[4 * x] = dst[4 * x + 1] = dst[4 * x + 2] = luma[x];
+}
+
 // Full-range planar F32: keep the matrix's B,G,R multiply/add order,
 // and reuse each luma vector for all three output planes.
 void FloatRgbRows(uint8_t* const* data, const int* pitch, int width, int height, float kr, float kg, float kb) {

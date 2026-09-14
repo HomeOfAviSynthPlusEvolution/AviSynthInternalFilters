@@ -10,6 +10,35 @@ void check(bool ok) {
   if (!ok)
     throw std::runtime_error("greyscale kernel failure");
 }
+void unaligned_bgra(uint32_t cpu) {
+  for (int width : {15, 16, 17, 33})
+    for (int sf : {0, 1})
+      for (int df : {0, 1}) {
+        const int pitch = width * 4 + 9, height = 3;
+        std::vector<uint8_t> source(pitch * height + 2, 0xAD);
+        for (int y = 0; y < height; ++y)
+          for (int x = 0; x < width * 4; ++x)
+            source[1 + y * pitch + x] = uint8_t(x * 37 + y * 19);
+        auto expected = source, actual = source;
+        for (int mode = 0; mode < 2; ++mode) {
+          uint8_t* data[] = {(mode ? actual : expected).data() + 1};
+          int pitches[] = {pitch};
+          aif_greyscale_plan* plan = nullptr;
+          check(!aif_greyscale_create(.299, .114, 8, sf, df, mode ? cpu : 0, &plan));
+          const int result = aif_greyscale_rgb(plan, data, pitches, width, height, 1, 4);
+          aif_greyscale_destroy(plan);
+          check(!result);
+        }
+        check(expected == actual);
+        check(actual.front() == source.front() && actual.back() == source.back());
+        for (int y = 0; y < height; ++y) {
+          for (int x = 0; x < width; ++x)
+            check(actual[1 + y * pitch + 4 * x + 3] == source[1 + y * pitch + 4 * x + 3]);
+          for (int x = width * 4; x < pitch; ++x)
+            check(actual[1 + y * pitch + x] == source[1 + y * pitch + x]);
+        }
+      }
+}
 void float_specials(uint32_t cpu) {
   constexpr int width = 65, stride = 72, height = 2, plane = stride * height;
   const float values[] = {0.f,
@@ -49,6 +78,7 @@ int main() {
       if (cpu != ~0u && !(cpu & aif_greyscale_supported_cpu()))
         continue;
       float_specials(cpu);
+      unaligned_bgra(cpu);
       for (int width : {2, 30, 32, 34, 62, 64, 66}) {
         const int pitch = width * 2 + 17;
         std::vector<uint8_t> expected(pitch * 3, 0x71), actual = expected;
