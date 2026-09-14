@@ -24,7 +24,7 @@ int main() {
                             {"SSE4", 8},        {"AVX2", 16},      {"AVX3", 32},     {"AVX3_DL", 64},
                             {"AVX3_ZEN4", 128}, {"AVX3_SPR", 256}, {"AVX10_2", 512}, {"auto", ~0u}};
   std::puts("width,height,bits,layout,target,median_us");
-  for (int w : {640, 1920})
+  for (int w : {960, 1920})
     for (int bits : {8, 16, 32})
       for (int step : {1, 2})
         for (int weighted : {0, 1}) {
@@ -33,7 +33,7 @@ int main() {
           const int bytes = bits == 8 ? 1 : bits == 32 ? 4 : 2;
           const int op = step * 10 + weighted;
           const double weight = weighted ? .625 : .5;
-          const int h = w == 640 ? 360 : 1080;
+          const int h = w == 960 ? 540 : 1080;
           const int pitch = w * bytes * step;
           std::vector<uint8_t> src(size_t(pitch) * h), original(src);
           for (size_t i = 0; i < src.size() / bytes; ++i) {

@@ -23,11 +23,11 @@ int main() {
                             {"SSE4", 8},        {"AVX2", 16},      {"AVX3", 32},     {"AVX3_DL", 64},
                             {"AVX3_ZEN4", 128}, {"AVX3_SPR", 256}, {"AVX10_2", 512}, {"auto", ~0u}};
   std::puts("width,height,bits,dim,target,median_us");
-  for (int w : {640, 1920})
+  for (int w : {960, 1920})
     for (int bits : {8, 16, 32})
       for (int op : {3, 5, 7, 9}) {
         const int bytes = bits == 8 ? 1 : bits == 32 ? 4 : 2;
-        const int h = w == 640 ? 360 : 1080, pitch = w * bytes;
+        const int h = w == 960 ? 540 : 1080, pitch = w * bytes;
         std::vector<uint8_t> src(size_t(pitch) * h);
         for (size_t i = 0; i < src.size() / bytes; ++i) {
           unsigned v = unsigned(i * 37 + 13) & 255;

@@ -22,10 +22,10 @@ int main() {
                             {"SSE4", 8},        {"AVX2", 16},      {"AVX3", 32},     {"AVX3_DL", 64},
                             {"AVX3_ZEN4", 128}, {"AVX3_SPR", 256}, {"AVX10_2", 512}, {"auto", ~0u}};
   std::puts("width,height,bytes,layout,target,median_us");
-  for (int w : {640, 1920})
+  for (int w : {960, 1920})
     for (int op : {0, 1, 2, 3, 4}) {
       const int bytes = 1;
-      const int h = w == 640 ? 360 : 1080;
+      const int h = w == 960 ? 540 : 1080;
       const int row = w * 4, pitch = row;
       std::vector<uint8_t> src(pitch * h, 73), u(pitch * h, 91), v(pitch * h, 113);
       std::vector<uint8_t> expected(pitch * h + 65, 0xAD), d(expected);

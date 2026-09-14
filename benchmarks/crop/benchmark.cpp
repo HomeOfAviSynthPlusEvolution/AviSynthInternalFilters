@@ -22,10 +22,10 @@ int main() {
                             {"SSE4", 8},        {"AVX2", 16},      {"AVX3", 32},     {"AVX3_DL", 64},
                             {"AVX3_ZEN4", 128}, {"AVX3_SPR", 256}, {"AVX10_2", 512}, {"auto", ~0u}};
   std::puts("width,height,bytes,border,target,median_us");
-  for (int w : {640, 1920})
+  for (int w : {960, 1920})
     for (int bytes : {1, 2, 3, 4, 6, 8})
       for (int op : {-1, 1, 64}) {
-        const int h = w == 640 ? 360 : 1080;
+        const int h = w == 960 ? 540 : 1080;
         const int border = op < 0 ? 0 : op;
         const int sw = op < 0 ? 1 : w, sh = op < 0 ? 1 : h;
         const int sp = sw * bytes, dr = (w + 2 * border) * bytes, dp = (dr + 63) & ~63;

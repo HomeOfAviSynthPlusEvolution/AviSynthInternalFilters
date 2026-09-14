@@ -23,12 +23,12 @@ int main() {
                             {"AVX2", 16},      {"AVX3", 32},     {"AVX3_DL", 64}, {"AVX3_ZEN4", 128},
                             {"AVX3_SPR", 256}, {"AVX10_2", 512}, {"auto", ~0u}};
   std::puts("width,height,bits,layout,target,median_us");
-  for (int w : {640, 1920})
+  for (int w : {960, 1920})
     for (int bits : {8, 16, 32})
       for (int layout : {0, 3, 4, 5, 6}) {
         if (((layout == 3 || layout == 4) && bits == 32) || (layout == 5 && bits != 8))
           continue;
-        const int h = w == 640 ? 360 : 1080, bytes = bits == 8 ? 1 : bits == 32 ? 4 : 2;
+        const int h = w == 960 ? 540 : 1080, bytes = bits == 8 ? 1 : bits == 32 ? 4 : 2;
         const int components = layout == 3 ? 3 : layout == 4 ? 4 : layout == 5 ? 2 : 1;
         const int pitch = (w * bytes * components + 63) & ~63;
         std::vector<uint32_t> input(size_t(pitch) * h * 3 / 4, 0), data = input, expected = input;

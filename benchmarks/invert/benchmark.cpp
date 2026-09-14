@@ -22,12 +22,12 @@ int main() {
                             {"SSE4", 8},        {"AVX2", 16},      {"AVX3", 32},     {"AVX3_DL", 64},
                             {"AVX3_ZEN4", 128}, {"AVX3_SPR", 256}, {"AVX10_2", 512}, {"auto", ~0u}};
   std::puts("width,height,bytes,float_mode,target,median_us");
-  for (int w : {640, 1920})
+  for (int w : {960, 1920})
     for (int bytes : {1, 2, 3, 4, 6, 8})
       for (int op : {-1, 0, 1}) {
         if (op >= 0 && bytes != 4)
           continue;
-        const int h = w == 640 ? 360 : 1080;
+        const int h = w == 960 ? 540 : 1080;
         const int row = w * bytes, pitch = row;
         const uint8_t pattern[8] = {16, 23, 69, 171, 22, 37, 61, 255};
         std::vector<uint8_t> expected(pitch * h + 65, 0xAD), d(expected);

@@ -22,12 +22,12 @@ int main() {
                             {"SSE4", 8},        {"AVX2", 16},      {"AVX3", 32},     {"AVX3_DL", 64},
                             {"AVX3_ZEN4", 128}, {"AVX3_SPR", 256}, {"AVX10_2", 512}, {"auto", ~0u}};
   std::puts("width,height,bytes,layout,target,median_us");
-  for (int w : {640, 1920})
+  for (int w : {960, 1920})
     for (int bytes : {1, 2, 4})
       for (int op : {0, 1, 2}) {
         if (op == 2 && bytes != 1)
           continue;
-        const int h = w == 640 ? 360 : 1080;
+        const int h = w == 960 ? 540 : 1080;
         const int row = w * bytes * (op == 2 ? 2 : 1), pitch = row;
         const int bits = bytes == 1 ? 8 : bytes == 2 ? 16 : 32;
         const float scale = bits == 32 ? 1.0f / 255 : float(1 << (bits - 8));

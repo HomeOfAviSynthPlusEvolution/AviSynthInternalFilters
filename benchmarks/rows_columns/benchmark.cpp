@@ -22,12 +22,12 @@ int main() {
                             {"SSE4", 8},        {"AVX2", 16},      {"AVX3", 32},     {"AVX3_DL", 64},
                             {"AVX3_ZEN4", 128}, {"AVX3_SPR", 256}, {"AVX10_2", 512}, {"auto", ~0u}};
   std::puts("width,height,bytes,layout,target,median_us");
-  for (int w : {640, 1920})
+  for (int w : {960, 1920})
     for (int bytes : {1, 2, 4, 8})
       for (int period : {2, 3, 4})
         for (int weave : {0, 1}) {
           const int op = period * 10 + weave;
-          const int h = w == 640 ? 360 : 1080;
+          const int h = w == 960 ? 540 : 1080;
           const int pitch = w * bytes * (weave ? period : 1);
           const int spv = w * bytes * (weave ? 1 : period);
           std::vector<uint8_t> buffers[4];

@@ -23,11 +23,11 @@ int main() {
                             {"SSE4", 8},        {"AVX2", 16},      {"AVX3", 32},     {"AVX3_DL", 64},
                             {"AVX3_ZEN4", 128}, {"AVX3_SPR", 256}, {"AVX10_2", 512}, {"auto", ~0u}};
   std::puts("width,height,bits,step,target,median_us");
-  for (int w : {640, 1920})
+  for (int w : {960, 1920})
     for (int bits : {8, 10, 12, 14, 16})
       for (int step : {1, 2, 4}) {
         const int bytes = bits == 8 ? 1 : 2, op = step;
-        const int h = w == 640 ? 360 : 1080, pitch = w * bytes * step;
+        const int h = w == 960 ? 540 : 1080, pitch = w * bytes * step;
         std::vector<uint8_t> src(size_t(pitch) * h);
         std::vector<uint16_t> table(1u << bits);
         for (size_t i = 0; i < table.size(); ++i)

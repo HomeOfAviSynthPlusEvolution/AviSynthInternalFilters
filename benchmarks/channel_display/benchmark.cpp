@@ -22,13 +22,13 @@ int main() {
                             {"SSE4", 8},        {"AVX2", 16},      {"AVX3", 32},     {"AVX3_DL", 64},
                             {"AVX3_ZEN4", 128}, {"AVX3_SPR", 256}, {"AVX10_2", 512}, {"auto", ~0u}};
   std::puts("width,height,bytes,layout,target,median_us");
-  for (int w : {640, 1920})
+  for (int w : {960, 1920})
     for (int bytes : {1, 2})
       for (int sc : {1, 3, 4})
         for (int dc : {1, 2, 3, 4}) {
           if (bytes == 2 && dc == 2)
             continue;
-          const int h = w == 640 ? 360 : 1080, op = sc * 10 + dc;
+          const int h = w == 960 ? 540 : 1080, op = sc * 10 + dc;
           const int sp = (w * bytes * sc + 63) & ~63, pitch = (w * bytes * (dc == 1 ? 1 : dc) + 63) & ~63;
           std::vector<uint8_t> src(size_t(sp) * h), expected(size_t(pitch) * h * 4, 0xAD), d(expected);
           for (size_t i = 0; i < src.size(); ++i)

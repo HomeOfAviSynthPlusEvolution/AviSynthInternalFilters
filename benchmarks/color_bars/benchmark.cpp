@@ -22,11 +22,11 @@ int main() {
                             {"SSE4", 8},        {"AVX2", 16},      {"AVX3", 32},     {"AVX3_DL", 64},
                             {"AVX3_ZEN4", 128}, {"AVX3_SPR", 256}, {"AVX10_2", 512}, {"auto", ~0u}};
   std::puts("width,height,bits,layout,hd,target,median_us");
-  for (int w : {640, 1920})
+  for (int w : {960, 1920})
     for (int bits : {8, 16, 32})
       for (int layout = 0; layout < 8; ++layout)
         for (int hd : {0, 1}) {
-          const int h = w == 640 ? 360 : 1080;
+          const int h = w == 960 ? 540 : 1080;
           if (hd && layout != 0)
             continue;
           if ((layout == 3 || layout == 7) && bits != 8)
