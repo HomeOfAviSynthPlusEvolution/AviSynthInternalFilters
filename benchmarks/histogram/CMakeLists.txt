@@ -1,0 +1,7 @@
+if(AIF_BUILD_PLUGINS)
+add_executable(aif_histogram_benchmark benchmark.cpp)
+target_include_directories(aif_histogram_benchmark PRIVATE "${AIF_AVISYNTH_INCLUDE_DIR}")
+target_link_libraries(aif_histogram_benchmark PRIVATE ${CMAKE_DL_LIBS})
+aif_target_defaults(aif_histogram_benchmark)
+add_dependencies(aif_histogram_benchmark aif_histogram_plugin)
+endif()
