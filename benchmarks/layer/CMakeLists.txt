@@ -1,0 +1,7 @@
+if(AIF_BUILD_PLUGINS)
+add_executable(aif_layer_benchmark benchmark.cpp)
+target_include_directories(aif_layer_benchmark PRIVATE "${AIF_AVISYNTH_INCLUDE_DIR}")
+target_link_libraries(aif_layer_benchmark PRIVATE ${CMAKE_DL_LIBS})
+aif_target_defaults(aif_layer_benchmark)
+add_dependencies(aif_layer_benchmark aif_layer_plugin)
+endif()
