@@ -80,49 +80,49 @@ int main(int argc, char** argv) {
     if (!env->FunctionExists("MultiOverlay")) {
       bool rejected = false;
       try {
-        env->Invoke("Eval", "IFAddBorders(BlankClip(width=32,height=16),2,2,2,2,r=1)");
+        env->Invoke("Eval", "AddBorders(BlankClip(width=32,height=16),2,2,2,2,r=1)");
       } catch (const AvisynthError& e) {
         rejected = std::string(e.msg).find("requires a host with MultiOverlay") != std::string::npos;
       }
       if (!rejected)
         throw std::runtime_error("missing transient resize dependency not diagnosed");
     }
-    const char* cases[] = {"IFSharpen(c,0.5)",
-                           "IFTemporalSoften(c,1,8,8)",
-                           "IFSpatialSoften(y,1,8,8)",
-                           "IFTurnLeft(c)",
-                           "IFFlipHorizontal(c)",
-                           "IFFlipVertical(c)",
-                           "IFAddBorders(c,2,2,2,2)",
-                           "IFSwapUV(y)",
-                           "IFCombinePlanes(c,planes=\"YUV\",source_planes=\"YUV\")",
-                           "IFCombinePlanes(c,planes=\"RGB\",source_planes=\"YUV\",pixel_type=\"RGBP\")",
-                           "IFExtractY(c)",
-                           "IFSeparateRows(c,2)",
-                           "IFWeaveRows(c,2)",
-                           "IFCrop(c,2,2,-2,-2)",
-                           "IFStackHorizontal(c,c)",
-                           "IFSharpen(BlankClip(width=32,height=16,length=4,pixel_type=\"YUV444P16\"),0.5)",
-                           "IFInvert(BlankClip(width=32,height=16,length=4,pixel_type=\"RGBAP16\"))",
-                           "IFTurnRight(BlankClip(width=32,height=16,length=4,pixel_type=\"RGBAPS\"))",
-                           "IFUToY(y)",
-                           "IFYToUV(IFUToY8(y),IFVToY8(y))",
-                           "IFShowRed(r)",
-                           "IFMergeRGB(c,c,c)",
-                           "IFShowFiveVersions(c,c,c,c,c)",
-                           "IFSeparateColumns(c,2)",
-                           "IFWeaveColumns(c,2)",
-                           "IFLevels(c,0,1.2,255,0,255)",
-                           "IFTweak(y,sat=0.7)",
-                           "IFRGBAdjust(r,r=0.8)",
-                           "IFColorYUV(y,gain_y=8)",
-                           "IFGeneralConvolution(c,matrix=\"1 1 1 1 1 1 1 1 1\")",
-                           "IFMerge(c,c,0.25)",
-                           "IFGreyscale(r)",
-                           "IFInvert(c)",
-                           "IFLimiter(c)",
-                           "IFBlankClip(width=32,height=16,length=4,pixel_type=\"YUV420P8\",color=$123456)",
-                           "IFColorBars(width=640,height=480,pixel_type=\"RGB32\")"};
+    const char* cases[] = {"Sharpen(c,0.5)",
+                           "TemporalSoften(c,1,8,8)",
+                           "SpatialSoften(y,1,8,8)",
+                           "TurnLeft(c)",
+                           "FlipHorizontal(c)",
+                           "FlipVertical(c)",
+                           "AddBorders(c,2,2,2,2)",
+                           "SwapUV(y)",
+                           "CombinePlanes(c,planes=\"YUV\",source_planes=\"YUV\")",
+                           "CombinePlanes(c,planes=\"RGB\",source_planes=\"YUV\",pixel_type=\"RGBP\")",
+                           "ExtractY(c)",
+                           "SeparateRows(c,2)",
+                           "WeaveRows(c,2)",
+                           "Crop(c,2,2,-2,-2)",
+                           "StackHorizontal(c,c)",
+                           "Sharpen(BlankClip(width=32,height=16,length=4,pixel_type=\"YUV444P16\"),0.5)",
+                           "Invert(BlankClip(width=32,height=16,length=4,pixel_type=\"RGBAP16\"))",
+                           "TurnRight(BlankClip(width=32,height=16,length=4,pixel_type=\"RGBAPS\"))",
+                           "UToY(y)",
+                           "YToUV(UToY8(y),VToY8(y))",
+                           "ShowRed(r)",
+                           "MergeRGB(c,c,c)",
+                           "ShowFiveVersions(c,c,c,c,c)",
+                           "SeparateColumns(c,2)",
+                           "WeaveColumns(c,2)",
+                           "Levels(c,0,1.2,255,0,255)",
+                           "Tweak(y,sat=0.7)",
+                           "RGBAdjust(r,r=0.8)",
+                           "ColorYUV(y,gain_y=8)",
+                           "GeneralConvolution(c,matrix=\"1 1 1 1 1 1 1 1 1\")",
+                           "Merge(c,c,0.25)",
+                           "Greyscale(r)",
+                           "Invert(c)",
+                           "Limiter(c)",
+                           "BlankClip(width=32,height=16,length=4,pixel_type=\"YUV420P8\",color=$123456)",
+                           "ColorBars(width=640,height=480,pixel_type=\"RGB32\")"};
     const std::string setup = "c=BlankClip(width=32,height=16,length=4,pixel_type=\"YUV444P8\",color=$345678)\ny="
                               "ConvertToYUY2(c)\nr=ConvertToRGB32(c)\n";
     for (const auto* expr : cases) {

@@ -38,11 +38,16 @@
 #include "spatial_soften.h"
 
 namespace aif::filters::focus {
-void register_filters(IScriptEnvironment* env) {
-  env->AddFunction("IFBlur", "cf[]f[mmx]b", Create_Blur, nullptr);
-  env->AddFunction("IFSharpen", "cf[]f[mmx]b", Create_Sharpen, nullptr);
-  env->AddFunction("IFTemporalSoften", "ciii[scenechange]i[mode]i", TemporalSoften::Create, nullptr);
-  env->AddFunction("IFSpatialSoften", "ciii", SpatialSoften::Create, nullptr);
+const std::array<Registration, 4>& registrations() {
+  static const std::array<Registration, 4> functions = {{
+      {"Blur", "cf[]f[mmx]b", Create_Blur, nullptr},
+      {"Sharpen", "cf[]f[mmx]b", Create_Sharpen, nullptr},
+      {"TemporalSoften", "ciii[scenechange]i[mode]i", TemporalSoften::Create, nullptr},
+      {"SpatialSoften", "ciii", SpatialSoften::Create, nullptr},
+  }};
+  return functions;
 }
-
+void register_filters(IScriptEnvironment* env) {
+  register_plugin(env, registrations());
+}
 } // namespace aif::filters::focus

@@ -2,6 +2,7 @@
 // Runtime differential tests: no link dependency on AvsCore or its private headers.
 #define NOMINMAX
 #include <avisynth.h>
+#include "../common/reference_clip.h"
 #include "../../src/color_bars/kernel_adapter.h"
 #include <algorithm>
 #include <cmath>
@@ -148,10 +149,11 @@ std::vector<uint8_t> snapshot(PVideoFrame frame, const VideoInfo& vi) {
   return result;
 }
 
-void compare(IScriptEnvironment* env, const char* name, std::vector<AVSValue> args) {
+void compare(IScriptEnvironment* reference_env, IScriptEnvironment* env, const char* name, std::vector<AVSValue> args) {
   ++cases;
-  PClip a = env->Invoke(name, AVSValue(args.data(), int(args.size()))).AsClip();
-  PClip b = env->Invoke((std::string("IF") + name).c_str(), AVSValue(args.data(), int(args.size()))).AsClip();
+  const auto reference_args = reference_arguments(args, env, reference_env);
+  PClip a = reference_env->Invoke(name, AVSValue(reference_args.data(), int(reference_args.size()))).AsClip();
+  PClip b = env->Invoke((std::string(name)).c_str(), AVSValue(args.data(), int(args.size()))).AsClip();
   const auto& x = a->GetVideoInfo();
   const auto& y = b->GetVideoInfo();
   require(x.width == y.width && x.height == y.height && x.pixel_type == y.pixel_type && x.num_frames == y.num_frames &&
@@ -161,7 +163,7 @@ void compare(IScriptEnvironment* env, const char* name, std::vector<AVSValue> ar
           "metadata mismatch");
   for (int n : {0, 2, 4}) {
     if (x.HasVideo()) {
-      auto af = a->GetFrame(n, env), bf = b->GetFrame(n, env);
+      auto af = a->GetFrame(n, reference_env), bf = b->GetFrame(n, env);
       require(snapshot(af, x) == snapshot(bf, y), "blank pixels mismatch");
       for (const char* prop : {"_Matrix", "_ColorRange"})
         require(env->propGetInt(env->getFramePropsRO(af), prop, 0, nullptr) ==
@@ -172,27 +174,30 @@ void compare(IScriptEnvironment* env, const char* name, std::vector<AVSValue> ar
   }
   if (x.HasAudio()) {
     std::vector<uint8_t> aa(size_t(x.BytesFromAudioSamples(17)), 0xAD), bb(aa);
-    a->GetAudio(aa.data(), 5, 17, env);
+    a->GetAudio(aa.data(), 5, 17, reference_env);
     b->GetAudio(bb.data(), 5, 17, env);
     require(aa == bb, "silence mismatch");
   }
 }
 
 void run_mode(Runtime& runtime, const char* plugin, const char* mode) {
+  Environment reference_holder(runtime);
+  auto* reference_env = reference_holder.env;
   Environment holder(runtime);
   auto* env = holder.env;
   try {
+    reference_env->Invoke("SetMaxCPU", mode);
     env->Invoke("SetMaxCPU", mode);
     env->Invoke("LoadPlugin", plugin);
     for (const char* type : {"YV24", "YV12", "YV16", "YV411", "YUV444P10", "YUV444PS", "YUVA420P16", "RGBP", "RGBAP16",
                              "RGBAPS", "RGB24", "RGB32", "RGB48", "RGB64", "YUY2"})
       for (int width : {16, 68, 280})
         for (bool stable : {false, true})
-          compare(env, "ColorBars", {width, 24, type, stable});
+          compare(reference_env, env, "ColorBars", {width, 24, type, stable});
     for (const char* type : {"YV24", "YUV444P10", "YUV444P12", "YUV444P14", "YUV444P16", "YUV444PS", "YUVA444P16"})
       for (int width : {28, 68, 280})
         for (bool stable : {false, true})
-          compare(env, "ColorBarsHD", {width, 24, type, stable});
+          compare(reference_env, env, "ColorBarsHD", {width, 24, type, stable});
     std::printf("mode '%s' passed (%d cases so far)\n", mode, cases);
   } catch (const AvisynthError& e) {
     // Copy host-owned error text before destroying the environment.

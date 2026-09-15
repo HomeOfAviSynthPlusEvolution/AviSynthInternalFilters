@@ -2,6 +2,7 @@
 // Runtime differential tests: no link dependency on AvsCore or its private headers.
 #define NOMINMAX
 #include <avisynth.h>
+#include "../common/reference_clip.h"
 #include "../../src/invert/kernel_adapter.h"
 #include <algorithm>
 #include <cmath>
@@ -148,15 +149,17 @@ std::vector<uint8_t> snapshot(PVideoFrame frame, const VideoInfo& vi) {
   return result;
 }
 
-void compare(IScriptEnvironment* env, const char* name, const std::vector<AVSValue>& args) {
+void compare(IScriptEnvironment* reference_env, IScriptEnvironment* env, const char* name,
+             const std::vector<AVSValue>& args) {
   ++cases;
-  const std::string migrated = std::string("IF") + name;
+  const std::string migrated = std::string(name);
   PClip source = args[0].AsClip();
   const auto& vi = source->GetVideoInfo();
   std::vector<std::vector<uint8_t>> before;
   for (int n = 0; n < vi.num_frames; ++n)
     before.push_back(snapshot(source->GetFrame(n, env), vi));
-  PClip old_filter = env->Invoke(name, AVSValue(args.data(), int(args.size()))).AsClip();
+  const auto reference_args = reference_arguments(args, env, reference_env);
+  PClip old_filter = reference_env->Invoke(name, AVSValue(reference_args.data(), int(reference_args.size()))).AsClip();
   PClip new_filter = env->Invoke(migrated.c_str(), AVSValue(args.data(), int(args.size()))).AsClip();
   const auto& out = new_filter->GetVideoInfo();
   const auto& ref = old_filter->GetVideoInfo();
@@ -164,7 +167,7 @@ void compare(IScriptEnvironment* env, const char* name, const std::vector<AVSVal
               out.num_frames == vi.num_frames && out.num_audio_samples == vi.num_audio_samples,
           "metadata changed");
   for (int n : {4, 0, 2, 2}) {
-    PVideoFrame a = old_filter->GetFrame(n, env), b = new_filter->GetFrame(n, env);
+    PVideoFrame a = old_filter->GetFrame(n, reference_env), b = new_filter->GetFrame(n, env);
     const auto aa = snapshot(a, ref), bb = snapshot(b, out);
     bool equal = aa == bb;
     if (!equal) {
@@ -181,7 +184,7 @@ void compare(IScriptEnvironment* env, const char* name, const std::vector<AVSVal
     require(new_filter->GetParity(n) == source->GetParity(n), "parity changed");
   }
   int16_t old_audio[16], new_audio[16];
-  old_filter->GetAudio(old_audio, 31, 16, env);
+  old_filter->GetAudio(old_audio, 31, 16, reference_env);
   new_filter->GetAudio(new_audio, 31, 16, env);
   require(std::memcmp(old_audio, new_audio, sizeof(old_audio)) == 0, "audio passthrough changed");
   for (int n = 0; n < vi.num_frames; ++n)
@@ -189,9 +192,12 @@ void compare(IScriptEnvironment* env, const char* name, const std::vector<AVSVal
 }
 
 void run_mode(Runtime& runtime, const char* plugin, const char* mode) {
+  Environment reference_holder(runtime);
+  auto* reference_env = reference_holder.env;
   Environment holder(runtime);
   auto* env = holder.env;
   try {
+    reference_env->Invoke("SetMaxCPU", mode);
     env->Invoke("SetMaxCPU", mode);
     env->Invoke("LoadPlugin", plugin);
     const int types[] = {VideoInfo::CS_Y8,       VideoInfo::CS_Y10,        VideoInfo::CS_Y16,   VideoInfo::CS_Y32,
@@ -203,9 +209,9 @@ void run_mode(Runtime& runtime, const char* plugin, const char* mode) {
       for (int width : {4, 16, 20, 64, 68})
         for (int height : {4, 8, 20}) {
           PClip source(new Sequence(env, type, width, height, false));
-          compare(env, "Invert", {source});
+          compare(reference_env, env, "Invert", {source});
           for (const char* channels : {"", "Y", "UV", "RGB", "A", "bGyV", "?"})
-            compare(env, "Invert", {source, channels});
+            compare(reference_env, env, "Invert", {source, channels});
         }
     std::printf("mode '%s' passed (%d cases so far)\n", mode, cases);
   } catch (const AvisynthError& e) {

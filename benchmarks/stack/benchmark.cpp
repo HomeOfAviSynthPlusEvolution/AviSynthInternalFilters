@@ -11,7 +11,7 @@ int main(int argc, char** argv) {
   env->Invoke("LoadPlugin", argv[2]);
   PClip source(new Sequence(env, VideoInfo::CS_YV12, 960, 1080, false));
   AVSValue args[] = {source, source};
-  auto filter = env->Invoke("IFStackHorizontal", AVSValue(args, 2)).AsClip();
+  auto filter = env->Invoke("StackHorizontal", AVSValue(args, 2)).AsClip();
   auto start = std::chrono::steady_clock::now();
   for (int i = 0; i < 50; ++i) {
     auto frame = filter->GetFrame(i % 5, env);

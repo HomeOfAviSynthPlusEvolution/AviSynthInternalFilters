@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
-class IScriptEnvironment;
+#include <internal_filters/registration.h>
 namespace aif::filters::rows_columns {
+const std::array<Registration, 4>& registrations();
 void register_filters(IScriptEnvironment* env);
-}
+} // namespace aif::filters::rows_columns

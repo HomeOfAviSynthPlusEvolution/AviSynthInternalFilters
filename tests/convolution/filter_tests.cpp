@@ -2,6 +2,7 @@
 // Runtime differential tests: no link dependency on AvsCore or its private headers.
 #define NOMINMAX
 #include <avisynth.h>
+#include "../common/reference_clip.h"
 #include "../../src/convolution/kernel_adapter.h"
 #include <algorithm>
 #include <cmath>
@@ -150,15 +151,17 @@ std::vector<uint8_t> snapshot(PVideoFrame frame, const VideoInfo& vi) {
   return result;
 }
 
-void compare(IScriptEnvironment* env, const char* name, const std::vector<AVSValue>& args) {
+void compare(IScriptEnvironment* reference_env, IScriptEnvironment* env, const char* name,
+             const std::vector<AVSValue>& args) {
   ++cases;
-  const std::string migrated = std::string("IF") + name;
+  const std::string migrated = std::string(name);
   PClip source = args[0].AsClip();
   const auto& vi = source->GetVideoInfo();
   std::vector<std::vector<uint8_t>> before;
   for (int n = 0; n < vi.num_frames; ++n)
     before.push_back(snapshot(source->GetFrame(n, env), vi));
-  PClip old_filter = env->Invoke(name, AVSValue(args.data(), int(args.size()))).AsClip();
+  const auto reference_args = reference_arguments(args, env, reference_env);
+  PClip old_filter = reference_env->Invoke(name, AVSValue(reference_args.data(), int(reference_args.size()))).AsClip();
   PClip new_filter = env->Invoke(migrated.c_str(), AVSValue(args.data(), int(args.size()))).AsClip();
   const auto& out = new_filter->GetVideoInfo();
   const auto& ref = old_filter->GetVideoInfo();
@@ -166,7 +169,7 @@ void compare(IScriptEnvironment* env, const char* name, const std::vector<AVSVal
               out.num_frames == vi.num_frames && out.num_audio_samples == vi.num_audio_samples,
           "metadata changed");
   for (int n : {4, 0, 2, 2}) {
-    PVideoFrame a = old_filter->GetFrame(n, env), b = new_filter->GetFrame(n, env);
+    PVideoFrame a = old_filter->GetFrame(n, reference_env), b = new_filter->GetFrame(n, env);
     auto aa = snapshot(a, ref), bb = snapshot(b, out);
     bool equal = aa == bb;
     if (!equal) {
@@ -189,7 +192,7 @@ void compare(IScriptEnvironment* env, const char* name, const std::vector<AVSVal
     require(new_filter->GetParity(n) == source->GetParity(n), "parity changed");
   }
   int16_t old_audio[16], new_audio[16];
-  old_filter->GetAudio(old_audio, 31, 16, env);
+  old_filter->GetAudio(old_audio, 31, 16, reference_env);
   new_filter->GetAudio(new_audio, 31, 16, env);
   require(std::memcmp(old_audio, new_audio, sizeof(old_audio)) == 0, "audio passthrough changed");
   for (int n = 0; n < vi.num_frames; ++n)
@@ -197,9 +200,12 @@ void compare(IScriptEnvironment* env, const char* name, const std::vector<AVSVal
 }
 
 void run_mode(Runtime& runtime, const char* plugin, const char* mode) {
+  Environment reference_holder(runtime);
+  auto* reference_env = reference_holder.env;
   Environment holder(runtime);
   auto* env = holder.env;
   try {
+    reference_env->Invoke("SetMaxCPU", mode);
     env->Invoke("SetMaxCPU", mode);
     env->Invoke("LoadPlugin", plugin);
     const int types[] = {VideoInfo::CS_Y8,        VideoInfo::CS_Y10,       VideoInfo::CS_Y16,
@@ -218,8 +224,10 @@ void run_mode(Runtime& runtime, const char* plugin, const char* mode) {
           for (int i = 0; i < dim * dim; ++i)
             matrix += std::to_string(i % 5 - 1) + " ";
           for (bool autoscale : {false, true}) {
-            compare(env, "GeneralConvolution", {source, 2.f, matrix.c_str(), 7.f, autoscale, true, !sub, true});
-            compare(env, "GeneralConvolution", {source, -1.f, matrix.c_str(), -3.f, autoscale, false, true, false});
+            compare(reference_env, env, "GeneralConvolution",
+                    {source, 2.f, matrix.c_str(), 7.f, autoscale, true, !sub, true});
+            compare(reference_env, env, "GeneralConvolution",
+                    {source, -1.f, matrix.c_str(), -3.f, autoscale, false, true, false});
           }
         }
       }
@@ -229,20 +237,20 @@ void run_mode(Runtime& runtime, const char* plugin, const char* mode) {
       for (int i = 0; i < 81; ++i)
         identity += i == 40 ? "1 " : "0 ";
       AVSValue args[] = {tiny, 0.f, identity.c_str()};
-      PClip filtered = env->Invoke("IFGeneralConvolution", AVSValue(args, 3)).AsClip();
+      PClip filtered = env->Invoke("GeneralConvolution", AVSValue(args, 3)).AsClip();
       require(snapshot(filtered->GetFrame(0, env), filtered->GetVideoInfo()) ==
                   snapshot(tiny->GetFrame(0, env), tiny->GetVideoInfo()),
               "narrow 9x9 identity failed");
     }
     {
       PClip f(new Sequence(env, VideoInfo::CS_RGBAPS, 19, 5, false));
-      compare(env, "GeneralConvolution", {f, .013f, ".1 -.3 .2 .7 -.5 .9 .4 .03 -.08", .37f, false});
+      compare(reference_env, env, "GeneralConvolution", {f, .013f, ".1 -.3 .2 .7 -.5 .9 .4 .03 -.08", .37f, false});
       PClip y(new Sequence(env, VideoInfo::CS_Y8, 16, 8, false));
       for (const char* matrix : {"1 2", "nan 0 0 0 1 0 0 0 0", "1e30 0 0 0 1 0 0 0 0"}) {
         bool rejected = false;
         try {
           AVSValue args[] = {y, 0.f, matrix};
-          env->Invoke("IFGeneralConvolution", AVSValue(args, 3));
+          env->Invoke("GeneralConvolution", AVSValue(args, 3));
         } catch (const AvisynthError&) {
           rejected = true;
         }

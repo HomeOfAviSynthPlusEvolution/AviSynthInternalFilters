@@ -2,6 +2,7 @@
 // Runtime differential tests: no link dependency on AvsCore or its private headers.
 #define NOMINMAX
 #include <avisynth.h>
+#include "../common/reference_clip.h"
 #include "../../src/crop/kernel_adapter.h"
 #include <algorithm>
 #include <cmath>
@@ -148,15 +149,17 @@ std::vector<uint8_t> snapshot(PVideoFrame frame, const VideoInfo& vi) {
   return result;
 }
 
-void compare(IScriptEnvironment* env, const char* name, const std::vector<AVSValue>& args) {
+void compare(IScriptEnvironment* reference_env, IScriptEnvironment* env, const char* name,
+             const std::vector<AVSValue>& args) {
   ++cases;
-  const std::string migrated = std::string("IF") + name;
+  const std::string migrated = std::string(name);
   PClip source = args[0].AsClip();
   const auto& vi = source->GetVideoInfo();
   std::vector<std::vector<uint8_t>> before;
   for (int n = 0; n < vi.num_frames; ++n)
     before.push_back(snapshot(source->GetFrame(n, env), vi));
-  PClip old_filter = env->Invoke(name, AVSValue(args.data(), int(args.size()))).AsClip();
+  const auto reference_args = reference_arguments(args, env, reference_env);
+  PClip old_filter = reference_env->Invoke(name, AVSValue(reference_args.data(), int(reference_args.size()))).AsClip();
   PClip new_filter = env->Invoke(migrated.c_str(), AVSValue(args.data(), int(args.size()))).AsClip();
   const auto& out = new_filter->GetVideoInfo();
   const auto& ref = old_filter->GetVideoInfo();
@@ -164,7 +167,7 @@ void compare(IScriptEnvironment* env, const char* name, const std::vector<AVSVal
               out.num_frames == vi.num_frames && out.num_audio_samples == vi.num_audio_samples,
           "metadata changed");
   for (int n : {4, 0, 2, 2}) {
-    PVideoFrame a = old_filter->GetFrame(n, env), b = new_filter->GetFrame(n, env);
+    PVideoFrame a = old_filter->GetFrame(n, reference_env), b = new_filter->GetFrame(n, env);
     const auto aa = snapshot(a, ref), bb = snapshot(b, out);
     bool equal = aa == bb;
     if (!equal) {
@@ -181,7 +184,7 @@ void compare(IScriptEnvironment* env, const char* name, const std::vector<AVSVal
     require(new_filter->GetParity(n) == source->GetParity(n), "parity changed");
   }
   int16_t old_audio[16], new_audio[16];
-  old_filter->GetAudio(old_audio, 31, 16, env);
+  old_filter->GetAudio(old_audio, 31, 16, reference_env);
   new_filter->GetAudio(new_audio, 31, 16, env);
   require(std::memcmp(old_audio, new_audio, sizeof(old_audio)) == 0, "audio passthrough changed");
   for (int n = 0; n < vi.num_frames; ++n)
@@ -189,9 +192,12 @@ void compare(IScriptEnvironment* env, const char* name, const std::vector<AVSVal
 }
 
 void run_mode(Runtime& runtime, const char* plugin, const char* mode) {
+  Environment reference_holder(runtime);
+  auto* reference_env = reference_holder.env;
   Environment holder(runtime);
   auto* env = holder.env;
   try {
+    reference_env->Invoke("SetMaxCPU", mode);
     env->Invoke("SetMaxCPU", mode);
     env->Invoke("LoadPlugin", plugin);
     const int types[] = {VideoInfo::CS_Y8,       VideoInfo::CS_Y10,        VideoInfo::CS_Y16,   VideoInfo::CS_Y32,
@@ -203,28 +209,31 @@ void run_mode(Runtime& runtime, const char* plugin, const char* mode) {
       for (int width : {16, 68})
         for (int height : {12, 20}) {
           PClip source(new Sequence(env, type, width, height, false));
-          compare(env, "Crop", {source, 4, 2, -4, -2});
-          compare(env, "Crop", {source, 0, 0, 0, 0, false});
-          compare(env, "CropBottom", {source, 2});
+          compare(reference_env, env, "Crop", {source, 4, 2, -4, -2});
+          compare(reference_env, env, "Crop", {source, 0, 0, 0, 0, false});
+          compare(reference_env, env, "CropBottom", {source, 2});
           for (int color : {0, 0x314F81, int(0xD7339955u)}) {
-            compare(env, "AddBorders", {source, 4, 2, 8, 4, color});
-            compare(env, "Letterbox", {source, 2, 4, 4, 4, color});
+            compare(reference_env, env, "AddBorders", {source, 4, 2, 8, 4, color});
+            compare(reference_env, env, "Letterbox", {source, 2, 4, 4, 4, color});
           }
           if (source->GetVideoInfo().IsYUV() || source->GetVideoInfo().IsYUVA())
-            compare(env, "AddBorders", {source, 4, 2, 4, 2, 0, 0x428FB1});
+            compare(reference_env, env, "AddBorders", {source, 4, 2, 4, 2, 0, 0x428FB1});
         }
     for (int type : {VideoInfo::CS_YV12, VideoInfo::CS_BGR32}) {
       PClip source(new Sequence(env, type, 64, 48, false));
       for (const char* resample : {"lanczos", "blackman", "sinc", "sinclin2"}) {
         for (double taps : {2.5, 120.0, 160.0}) {
-          compare(env, "AddBorders", {source, 8, 8, 8, 8, 0, AVSValue(), resample, taps, AVSValue(), AVSValue(), -4});
-          compare(env, "Letterbox", {source, 8, 8, 8, 8, 0, AVSValue(), resample, taps, AVSValue(), AVSValue(), 4});
+          compare(reference_env, env, "AddBorders",
+                  {source, 8, 8, 8, 8, 0, AVSValue(), resample, taps, AVSValue(), AVSValue(), -4});
+          compare(reference_env, env, "Letterbox",
+                  {source, 8, 8, 8, 8, 0, AVSValue(), resample, taps, AVSValue(), AVSValue(), 4});
         }
       }
       for (const char* resample : {"point", "bilinear", "bicubic", "lanczos", "spline36", "gauss"}) {
-        compare(env, "AddBorders",
+        compare(reference_env, env, "AddBorders",
                 {source, 8, 8, 8, 8, 0, AVSValue(), resample, AVSValue(), AVSValue(), AVSValue(), 4});
-        compare(env, "Letterbox", {source, 8, 8, 8, 8, 0, AVSValue(), resample, AVSValue(), AVSValue(), AVSValue(), 4});
+        compare(reference_env, env, "Letterbox",
+                {source, 8, 8, 8, 8, 0, AVSValue(), resample, AVSValue(), AVSValue(), AVSValue(), 4});
       }
     }
     std::printf("mode '%s' passed (%d cases so far)\n", mode, cases);

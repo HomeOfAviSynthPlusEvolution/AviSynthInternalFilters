@@ -4,11 +4,17 @@
 #include "flip_horizontal.h"
 #include "flip_vertical.h"
 namespace aif::filters::rotation {
+const std::array<Registration, 5>& registrations() {
+  static const std::array<Registration, 5> functions = {{
+      {"TurnLeft", "c", Turn::create_turnleft, nullptr},
+      {"TurnRight", "c", Turn::create_turnright, nullptr},
+      {"Turn180", "c", Turn::create_turn180, nullptr},
+      {"FlipHorizontal", "c", FlipHorizontal::Create, nullptr},
+      {"FlipVertical", "c", FlipVertical::Create, nullptr},
+  }};
+  return functions;
+}
 void register_filters(IScriptEnvironment* env) {
-  env->AddFunction("IFTurnLeft", "c", Turn::create_turnleft, nullptr);
-  env->AddFunction("IFTurnRight", "c", Turn::create_turnright, nullptr);
-  env->AddFunction("IFTurn180", "c", Turn::create_turn180, nullptr);
-  env->AddFunction("IFFlipHorizontal", "c", FlipHorizontal::Create, nullptr);
-  env->AddFunction("IFFlipVertical", "c", FlipVertical::Create, nullptr);
+  register_plugin(env, registrations());
 }
 } // namespace aif::filters::rotation

@@ -2,6 +2,7 @@
 // Runtime differential tests: no link dependency on AvsCore or its private headers.
 #define NOMINMAX
 #include <avisynth.h>
+#include "../common/reference_clip.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -126,22 +127,24 @@ std::vector<uint8_t> snapshot(PVideoFrame frame, const VideoInfo& vi) {
   return result;
 }
 
-void compare(IScriptEnvironment* env, const char* name, const std::vector<AVSValue>& args) {
+void compare(IScriptEnvironment* reference_env, IScriptEnvironment* env, const char* name,
+             const std::vector<AVSValue>& args) {
   ++cases;
-  const std::string migrated = std::string("IF") + name;
+  const std::string migrated = std::string(name);
   PClip source = args[0].AsClip();
   const auto& vi = source->GetVideoInfo();
   std::vector<std::vector<uint8_t>> before;
   for (int n = 0; n < vi.num_frames; ++n)
     before.push_back(snapshot(source->GetFrame(n, env), vi));
-  PClip old_filter = env->Invoke(name, AVSValue(args.data(), int(args.size()))).AsClip();
+  const auto reference_args = reference_arguments(args, env, reference_env);
+  PClip old_filter = reference_env->Invoke(name, AVSValue(reference_args.data(), int(reference_args.size()))).AsClip();
   PClip new_filter = env->Invoke(migrated.c_str(), AVSValue(args.data(), int(args.size()))).AsClip();
   const auto& out = new_filter->GetVideoInfo();
   require(out.width == vi.width && out.height == vi.height && out.pixel_type == vi.pixel_type &&
               out.num_frames == vi.num_frames && out.num_audio_samples == vi.num_audio_samples,
           "metadata changed");
   for (int n : {4, 0, 2, 2}) {
-    PVideoFrame a = old_filter->GetFrame(n, env), b = new_filter->GetFrame(n, env);
+    PVideoFrame a = old_filter->GetFrame(n, reference_env), b = new_filter->GetFrame(n, env);
     const auto aa = snapshot(a, vi), bb = snapshot(b, vi);
     bool equal = aa == bb;
     if (!equal && vi.ComponentSize() == 4) {
@@ -167,7 +170,7 @@ void compare(IScriptEnvironment* env, const char* name, const std::vector<AVSVal
     require(new_filter->GetParity(n) == source->GetParity(n), "parity changed");
   }
   int16_t old_audio[16], new_audio[16];
-  old_filter->GetAudio(old_audio, 31, 16, env);
+  old_filter->GetAudio(old_audio, 31, 16, reference_env);
   new_filter->GetAudio(new_audio, 31, 16, env);
   require(std::memcmp(old_audio, new_audio, sizeof(old_audio)) == 0, "audio passthrough changed");
   for (int n = 0; n < vi.num_frames; ++n)
@@ -175,9 +178,12 @@ void compare(IScriptEnvironment* env, const char* name, const std::vector<AVSVal
 }
 
 void run_mode(Runtime& runtime, const char* plugin, const char* mode) {
+  Environment reference_holder(runtime);
+  auto* reference_env = reference_holder.env;
   Environment holder(runtime);
   auto* env = holder.env;
   try {
+    reference_env->Invoke("SetMaxCPU", mode);
     env->Invoke("SetMaxCPU", mode);
     env->Invoke("LoadPlugin", plugin);
     const int types[] = {VideoInfo::CS_Y8,      VideoInfo::CS_Y10,       VideoInfo::CS_Y16,      VideoInfo::CS_Y32,
@@ -188,11 +194,11 @@ void run_mode(Runtime& runtime, const char* plugin, const char* mode) {
       for (int width : {4, 18, 66}) {
         PClip source(new Sequence(env, type, width, 8, false));
         for (double amount : {0.0, .37, .5, 1.0}) {
-          compare(env, "Blur", {source, amount, 0.0});
-          compare(env, "Sharpen", {source, 0.0, amount});
+          compare(reference_env, env, "Blur", {source, amount, 0.0});
+          compare(reference_env, env, "Sharpen", {source, 0.0, amount});
         }
-        compare(env, "Blur", {source, .37, .61});
-        compare(env, "Sharpen", {source, .37, .61});
+        compare(reference_env, env, "Blur", {source, .37, .61});
+        compare(reference_env, env, "Sharpen", {source, .37, .61});
       }
     for (int type : types)
       for (bool stable : {false, true}) {
@@ -200,19 +206,19 @@ void run_mode(Runtime& runtime, const char* plugin, const char* mode) {
         if (source->GetVideoInfo().IsRGB24() || source->GetVideoInfo().IsRGB48())
           continue;
         for (int threshold : {0, 12, 255}) {
-          compare(env, "TemporalSoften", {source, 2, threshold, threshold, 0});
+          compare(reference_env, env, "TemporalSoften", {source, 2, threshold, threshold, 0});
           if (!source->GetVideoInfo().IsRGB32() && !source->GetVideoInfo().IsRGB64())
-            compare(env, "TemporalSoften", {source, 2, threshold, threshold, 12});
+            compare(reference_env, env, "TemporalSoften", {source, 2, threshold, threshold, 12});
         }
       }
     PClip source(new Sequence(env, VideoInfo::CS_YUY2, 64, 8, false));
     for (int radius : {0, 1, 3})
       for (int threshold : {0, 12, 255})
-        compare(env, "SpatialSoften", {source, radius, threshold, threshold});
-    const char* bad_scripts[] = {"IFBlur(BlankClip(), 2.0)", "IFSharpen(BlankClip(), -2.0)",
-                                 "IFSpatialSoften(BlankClip(pixel_type=\"Y8\"), 1, 1, 1)",
-                                 "IFSpatialSoften(BlankClip(pixel_type=\"YUY2\"), 33, 1, 1)",
-                                 "IFTemporalSoften(BlankClip(pixel_type=\"RGB24\"), 1, 1, 1)"};
+        compare(reference_env, env, "SpatialSoften", {source, radius, threshold, threshold});
+    const char* bad_scripts[] = {"Blur(BlankClip(), 2.0)", "Sharpen(BlankClip(), -2.0)",
+                                 "SpatialSoften(BlankClip(pixel_type=\"Y8\"), 1, 1, 1)",
+                                 "SpatialSoften(BlankClip(pixel_type=\"YUY2\"), 33, 1, 1)",
+                                 "TemporalSoften(BlankClip(pixel_type=\"RGB24\"), 1, 1, 1)"};
     for (const char* script : bad_scripts) {
       bool rejected = false;
       try {

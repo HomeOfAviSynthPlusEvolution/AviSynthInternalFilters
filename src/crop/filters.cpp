@@ -4,12 +4,18 @@
 #include "add_borders.h"
 #include "letterbox.h"
 namespace aif::filters::crop {
+const std::array<Registration, 4>& registrations() {
+  static const std::array<Registration, 4> functions = {{
+      {"Crop", "ciiii[align]b", Crop::Create, nullptr},
+      {"CropBottom", "ci", create_crop_bottom, nullptr},
+      {"AddBorders", "ciiii[color]i[color_yuv]i[resample]s[param1]f[param2]f[param3]f[r]i", create_add_borders,
+       nullptr},
+      {"Letterbox", "cii[x1]i[x2]i[color]i[color_yuv]i[resample]s[param1]f[param2]f[param3]f[r]i", create_letterbox,
+       nullptr},
+  }};
+  return functions;
+}
 void register_filters(IScriptEnvironment* env) {
-  env->AddFunction("IFCrop", "ciiii[align]b", Crop::Create, nullptr);
-  env->AddFunction("IFCropBottom", "ci", create_crop_bottom, nullptr);
-  env->AddFunction("IFAddBorders", "ciiii[color]i[color_yuv]i[resample]s[param1]f[param2]f[param3]f[r]i",
-                   create_add_borders, nullptr);
-  env->AddFunction("IFLetterbox", "cii[x1]i[x2]i[color]i[color_yuv]i[resample]s[param1]f[param2]f[param3]f[r]i",
-                   create_letterbox, nullptr);
+  register_plugin(env, registrations());
 }
 } // namespace aif::filters::crop

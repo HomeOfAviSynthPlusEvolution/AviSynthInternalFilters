@@ -2,6 +2,7 @@
 // Runtime differential tests: no link dependency on AvsCore or its private headers.
 #define NOMINMAX
 #include <avisynth.h>
+#include "../common/reference_clip.h"
 #include "../../src/planes/kernel_adapter.h"
 #include <algorithm>
 #include <cmath>
@@ -148,15 +149,17 @@ std::vector<uint8_t> snapshot(PVideoFrame frame, const VideoInfo& vi) {
   return result;
 }
 
-void compare(IScriptEnvironment* env, const char* name, const std::vector<AVSValue>& args) {
+void compare(IScriptEnvironment* reference_env, IScriptEnvironment* env, const char* name,
+             const std::vector<AVSValue>& args) {
   ++cases;
-  const std::string migrated = std::string("IF") + name;
+  const std::string migrated = std::string(name);
   PClip source = args[0].AsClip();
   const auto& vi = source->GetVideoInfo();
   std::vector<std::vector<uint8_t>> before;
   for (int n = 0; n < vi.num_frames; ++n)
     before.push_back(snapshot(source->GetFrame(n, env), vi));
-  PClip old_filter = env->Invoke(name, AVSValue(args.data(), int(args.size()))).AsClip();
+  const auto reference_args = reference_arguments(args, env, reference_env);
+  PClip old_filter = reference_env->Invoke(name, AVSValue(reference_args.data(), int(reference_args.size()))).AsClip();
   PClip new_filter = env->Invoke(migrated.c_str(), AVSValue(args.data(), int(args.size()))).AsClip();
   const auto& out = new_filter->GetVideoInfo();
   const auto& ref = old_filter->GetVideoInfo();
@@ -164,7 +167,7 @@ void compare(IScriptEnvironment* env, const char* name, const std::vector<AVSVal
               out.num_frames == vi.num_frames && out.num_audio_samples == vi.num_audio_samples,
           "metadata changed");
   for (int n : {4, 0, 2, 2}) {
-    PVideoFrame a = old_filter->GetFrame(n, env), b = new_filter->GetFrame(n, env);
+    PVideoFrame a = old_filter->GetFrame(n, reference_env), b = new_filter->GetFrame(n, env);
     auto aa = snapshot(a, ref), bb = snapshot(b, out);
     // Legacy UToY/VToY leave the resized alpha plane unspecified in both implementations.
     if (out.IsYUVA() && (std::strcmp(name, "UToY") == 0 || std::strcmp(name, "VToY") == 0)) {
@@ -186,7 +189,7 @@ void compare(IScriptEnvironment* env, const char* name, const std::vector<AVSVal
     require(new_filter->GetParity(n) == source->GetParity(n), "parity changed");
   }
   int16_t old_audio[16], new_audio[16];
-  old_filter->GetAudio(old_audio, 31, 16, env);
+  old_filter->GetAudio(old_audio, 31, 16, reference_env);
   new_filter->GetAudio(new_audio, 31, 16, env);
   require(std::memcmp(old_audio, new_audio, sizeof(old_audio)) == 0, "audio passthrough changed");
   for (int n = 0; n < vi.num_frames; ++n)
@@ -194,9 +197,12 @@ void compare(IScriptEnvironment* env, const char* name, const std::vector<AVSVal
 }
 
 void run_mode(Runtime& runtime, const char* plugin, const char* mode) {
+  Environment reference_holder(runtime);
+  auto* reference_env = reference_holder.env;
   Environment holder(runtime);
   auto* env = holder.env;
   try {
+    reference_env->Invoke("SetMaxCPU", mode);
     env->Invoke("SetMaxCPU", mode);
     env->Invoke("LoadPlugin", plugin);
     const int types[] = {VideoInfo::CS_Y8,       VideoInfo::CS_Y10,        VideoInfo::CS_Y16,   VideoInfo::CS_Y32,
@@ -210,50 +216,50 @@ void run_mode(Runtime& runtime, const char* plugin, const char* mode) {
           PClip source(new Sequence(env, type, width, height, false));
           const auto& vi = source->GetVideoInfo();
           if (!vi.IsRGB()) {
-            compare(env, "SwapUV", {source});
-            compare(env, "ExtractY", {source});
-            compare(env, "PlaneToY", {source, "Y"});
+            compare(reference_env, env, "SwapUV", {source});
+            compare(reference_env, env, "ExtractY", {source});
+            compare(reference_env, env, "PlaneToY", {source, "Y"});
             if (!vi.IsY()) {
               for (const char* name : {"UToY8", "VToY8", "ExtractU", "ExtractV"})
-                compare(env, name, {source});
+                compare(reference_env, env, name, {source});
               for (const char* plane : {"U", "V"})
-                compare(env, "PlaneToY", {source, plane});
+                compare(reference_env, env, "PlaneToY", {source, plane});
               for (const char* name : {"UToY", "VToY"})
-                compare(env, name, {source});
+                compare(reference_env, env, name, {source});
             }
           } else {
             for (const char* name : {"ExtractR", "ExtractG", "ExtractB"})
-              compare(env, name, {source});
+              compare(reference_env, env, name, {source});
             for (const char* plane : {"R", "G", "B"})
-              compare(env, "PlaneToY", {source, plane});
+              compare(reference_env, env, "PlaneToY", {source, plane});
           }
           if (vi.NumComponents() == 4) {
-            compare(env, "ExtractA", {source});
-            compare(env, "PlaneToY", {source, "A"});
+            compare(reference_env, env, "ExtractA", {source});
+            compare(reference_env, env, "PlaneToY", {source, "A"});
           }
           if (vi.IsPlanar()) {
             const char* mapping = vi.IsRGB() ? (vi.NumComponents() == 4 ? "RGBA" : "RGB")
                                              : (vi.IsY()                  ? "Y"
                                                 : vi.NumComponents() == 4 ? "YUVA"
                                                                           : "YUV");
-            compare(env, "CombinePlanes", {source, mapping, mapping});
+            compare(reference_env, env, "CombinePlanes", {source, mapping, mapping});
             if (!vi.IsY())
-              compare(env, "CombinePlanes", {source, source, mapping});
+              compare(reference_env, env, "CombinePlanes", {source, source, mapping});
           }
         }
     for (int bits_type : {VideoInfo::CS_Y8, VideoInfo::CS_Y10, VideoInfo::CS_Y16, VideoInfo::CS_Y32}) {
       PClip uv(new Sequence(env, bits_type, 16, 8, false));
       PClip y(new Sequence(env, bits_type, 32, 16, false));
-      compare(env, "YToUV", {uv, uv});
-      compare(env, "YToUV", {uv, uv, y});
-      compare(env, "YToUV", {uv, uv, y, y});
-      compare(env, "CombinePlanes", {uv, uv, uv, "RGB"});
-      compare(env, "CombinePlanes", {uv, uv, uv, uv, "RGBA"});
+      compare(reference_env, env, "YToUV", {uv, uv});
+      compare(reference_env, env, "YToUV", {uv, uv, y});
+      compare(reference_env, env, "YToUV", {uv, uv, y, y});
+      compare(reference_env, env, "CombinePlanes", {uv, uv, uv, "RGB"});
+      compare(reference_env, env, "CombinePlanes", {uv, uv, uv, uv, "RGBA"});
     }
     PClip uv(new Sequence(env, VideoInfo::CS_YUY2, 16, 4, false)),
         y(new Sequence(env, VideoInfo::CS_YUY2, 32, 4, false));
-    compare(env, "YToUV", {uv, uv});
-    compare(env, "YToUV", {uv, uv, y});
+    compare(reference_env, env, "YToUV", {uv, uv});
+    compare(reference_env, env, "YToUV", {uv, uv, y});
     std::printf("mode '%s' passed (%d cases so far)\n", mode, cases);
   } catch (const AvisynthError& e) {
     // Copy host-owned error text before destroying the environment.

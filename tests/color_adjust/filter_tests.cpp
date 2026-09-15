@@ -2,6 +2,7 @@
 // Runtime differential tests: no link dependency on AvsCore or its private headers.
 #define NOMINMAX
 #include <avisynth.h>
+#include "../common/reference_clip.h"
 #include "../../src/color_adjust/kernel_adapter.h"
 #include <algorithm>
 #include <cmath>
@@ -149,15 +150,17 @@ std::vector<uint8_t> snapshot(PVideoFrame frame, const VideoInfo& vi) {
   return result;
 }
 
-void compare(IScriptEnvironment* env, const char* name, const std::vector<AVSValue>& args) {
+void compare(IScriptEnvironment* reference_env, IScriptEnvironment* env, const char* name,
+             const std::vector<AVSValue>& args) {
   ++cases;
-  const std::string migrated = std::string("IF") + name;
+  const std::string migrated = std::string(name);
   PClip source = args[0].AsClip();
   const auto& vi = source->GetVideoInfo();
   std::vector<std::vector<uint8_t>> before;
   for (int n = 0; n < vi.num_frames; ++n)
     before.push_back(snapshot(source->GetFrame(n, env), vi));
-  PClip old_filter = env->Invoke(name, AVSValue(args.data(), int(args.size()))).AsClip();
+  const auto reference_args = reference_arguments(args, env, reference_env);
+  PClip old_filter = reference_env->Invoke(name, AVSValue(reference_args.data(), int(reference_args.size()))).AsClip();
   PClip new_filter = env->Invoke(migrated.c_str(), AVSValue(args.data(), int(args.size()))).AsClip();
   const auto& out = new_filter->GetVideoInfo();
   const auto& ref = old_filter->GetVideoInfo();
@@ -165,7 +168,7 @@ void compare(IScriptEnvironment* env, const char* name, const std::vector<AVSVal
               out.num_frames == vi.num_frames && out.num_audio_samples == vi.num_audio_samples,
           "metadata changed");
   for (int n : {4, 0, 2, 2}) {
-    PVideoFrame a = old_filter->GetFrame(n, env), b = new_filter->GetFrame(n, env);
+    PVideoFrame a = old_filter->GetFrame(n, reference_env), b = new_filter->GetFrame(n, env);
     auto aa = snapshot(a, ref), bb = snapshot(b, out);
     bool equal = aa == bb;
     if (!equal) {
@@ -188,7 +191,7 @@ void compare(IScriptEnvironment* env, const char* name, const std::vector<AVSVal
     require(new_filter->GetParity(n) == source->GetParity(n), "parity changed");
   }
   int16_t old_audio[16], new_audio[16];
-  old_filter->GetAudio(old_audio, 31, 16, env);
+  old_filter->GetAudio(old_audio, 31, 16, reference_env);
   new_filter->GetAudio(new_audio, 31, 16, env);
   require(std::memcmp(old_audio, new_audio, sizeof(old_audio)) == 0, "audio passthrough changed");
   for (int n = 0; n < vi.num_frames; ++n)
@@ -196,9 +199,12 @@ void compare(IScriptEnvironment* env, const char* name, const std::vector<AVSVal
 }
 
 void run_mode(Runtime& runtime, const char* plugin, const char* mode) {
+  Environment reference_holder(runtime);
+  auto* reference_env = reference_holder.env;
   Environment holder(runtime);
   auto* env = holder.env;
   try {
+    reference_env->Invoke("SetMaxCPU", mode);
     env->Invoke("SetMaxCPU", mode);
     env->Invoke("LoadPlugin", plugin);
     const int types[] = {VideoInfo::CS_Y8,        VideoInfo::CS_Y10,       VideoInfo::CS_Y16,
@@ -215,24 +221,27 @@ void run_mode(Runtime& runtime, const char* plugin, const char* mode) {
         for (bool dither : {false, true}) {
           if (dither && vi.BitsPerComponent() > 10 && vi.BitsPerComponent() != 32)
             continue;
-          compare(env, "Levels", {source, 0.05f * max, 1.2f, .9f * max, .1f * max, .95f * max, false, dither});
-          compare(env, "Levels", {source, 0.0f, 1.0f, max, 0.0f, max, true, dither});
+          compare(reference_env, env, "Levels",
+                  {source, 0.05f * max, 1.2f, .9f * max, .1f * max, .95f * max, false, dither});
+          compare(reference_env, env, "Levels", {source, 0.0f, 1.0f, max, 0.0f, max, true, dither});
           if (vi.IsRGB()) {
-            compare(env, "RGBAdjust",
+            compare(reference_env, env, "RGBAdjust",
                     {source, 1.1f, .8f, 1.2f, .7f, 2.f, -1.f, 3.f, 4.f, .9f, 1.1f, 1.2f, .8f, false, dither});
           } else if (!vi.IsY()) {
-            compare(env, "Tweak",
+            compare(reference_env, env, "Tweak",
                     {source, 27.f, 1.1f, 2.f, .9f, true, false, 0.f, 360.f, 150.f, 0.f, 16.f, dither, false});
-            compare(env, "Tweak",
+            compare(reference_env, env, "Tweak",
                     {source, -15.f, .7f, -2.f, 1.2f, false, false, 20.f, 200.f, 100.f, 10.f, 8.f, dither, true});
           } else {
-            compare(env, "Tweak",
+            compare(reference_env, env, "Tweak",
                     {source, 0.f, 1.f, 3.f, .9f, true, false, 0.f, 360.f, 150.f, 0.f, 16.f, dither, false});
           }
         }
         if (!vi.IsRGB()) {
-          compare(env, "ColorYUV", {source, 12.f, -3.f, 7.f, 5.f, -8.f, 2.f, 4.f, 0.f, 3.f, -2.f, 0.f, 4.f});
-          compare(env, "ColorYUV", {source, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, "TV->PC"});
+          compare(reference_env, env, "ColorYUV",
+                  {source, 12.f, -3.f, 7.f, 5.f, -8.f, 2.f, 4.f, 0.f, 3.f, -2.f, 0.f, 4.f});
+          compare(reference_env, env, "ColorYUV",
+                  {source, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, "TV->PC"});
         }
       }
     std::printf("mode '%s' passed (%d cases so far)\n", mode, cases);

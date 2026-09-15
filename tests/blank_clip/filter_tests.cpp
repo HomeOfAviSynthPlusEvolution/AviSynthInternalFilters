@@ -2,6 +2,7 @@
 // Runtime differential tests: no link dependency on AvsCore or its private headers.
 #define NOMINMAX
 #include <avisynth.h>
+#include "../common/reference_clip.h"
 #include "../../src/blank_clip/kernel_adapter.h"
 #include <algorithm>
 #include <cmath>
@@ -148,7 +149,7 @@ std::vector<uint8_t> snapshot(PVideoFrame frame, const VideoInfo& vi) {
   return result;
 }
 
-void compare(IScriptEnvironment* env, const char* name, std::vector<AVSValue> args) {
+void compare(IScriptEnvironment* reference_env, IScriptEnvironment* env, const char* name, std::vector<AVSValue> args) {
   ++cases;
   const char* names[] = {nullptr,      "length",   "width",       "height", "pixel_type", "fps",  "fps_denominator",
                          "audio_rate", "channels", "sample_type", "color",  "color_yuv",  "clip", "colors"};
@@ -159,9 +160,10 @@ void compare(IScriptEnvironment* env, const char* name, std::vector<AVSValue> ar
       values.push_back(args[i]);
       keys.push_back(names[i]);
     }
-  PClip a = env->Invoke(name, AVSValue(values.data(), int(values.size())), keys.data()).AsClip();
-  PClip b = env->Invoke((std::string("IF") + name).c_str(), AVSValue(values.data(), int(values.size())), keys.data())
-                .AsClip();
+  const auto reference_args = reference_arguments(values, env, reference_env);
+  PClip a =
+      reference_env->Invoke(name, AVSValue(reference_args.data(), int(reference_args.size())), keys.data()).AsClip();
+  PClip b = env->Invoke((std::string(name)).c_str(), AVSValue(values.data(), int(values.size())), keys.data()).AsClip();
   const auto& x = a->GetVideoInfo();
   const auto& y = b->GetVideoInfo();
   require(x.width == y.width && x.height == y.height && x.pixel_type == y.pixel_type && x.num_frames == y.num_frames &&
@@ -171,7 +173,7 @@ void compare(IScriptEnvironment* env, const char* name, std::vector<AVSValue> ar
           "metadata mismatch");
   for (int n : {0, 2, 4}) {
     if (x.HasVideo()) {
-      auto af = a->GetFrame(n, env), bf = b->GetFrame(n, env);
+      auto af = a->GetFrame(n, reference_env), bf = b->GetFrame(n, env);
       require(snapshot(af, x) == snapshot(bf, y), "blank pixels mismatch");
       for (const char* prop : {"_Matrix", "_ColorRange"})
         require(env->propGetInt(env->getFramePropsRO(af), prop, 0, nullptr) ==
@@ -182,16 +184,19 @@ void compare(IScriptEnvironment* env, const char* name, std::vector<AVSValue> ar
   }
   if (x.HasAudio()) {
     std::vector<uint8_t> aa(size_t(x.BytesFromAudioSamples(17)), 0xAD), bb(aa);
-    a->GetAudio(aa.data(), 5, 17, env);
+    a->GetAudio(aa.data(), 5, 17, reference_env);
     b->GetAudio(bb.data(), 5, 17, env);
     require(aa == bb, "silence mismatch");
   }
 }
 
 void run_mode(Runtime& runtime, const char* plugin, const char* mode) {
+  Environment reference_holder(runtime);
+  auto* reference_env = reference_holder.env;
   Environment holder(runtime);
   auto* env = holder.env;
   try {
+    reference_env->Invoke("SetMaxCPU", mode);
     env->Invoke("SetMaxCPU", mode);
     env->Invoke("LoadPlugin", plugin);
     for (const char* type : {"Y8", "Y10", "Y16", "Y32", "YV12", "YV16", "YV411", "YUV444P10", "YUV444PS", "YUVA420P16",
@@ -204,7 +209,7 @@ void run_mode(Runtime& runtime, const char* plugin, const char* mode) {
           args[3] = 12;
           args[4] = type;
           args[10] = color;
-          compare(env, name, args);
+          compare(reference_env, env, name, args);
         }
       std::vector<AVSValue> args(14);
       args[1] = 5;
@@ -213,13 +218,13 @@ void run_mode(Runtime& runtime, const char* plugin, const char* mode) {
       args[4] = type;
       AVSValue colors[] = {std::nextafter(0.5f, 0.0f), 0.25f, 0.5f, 0.75f};
       args[13] = AVSValue(colors, 4);
-      compare(env, "BlankClip", args);
+      compare(reference_env, env, "BlankClip", args);
     }
     for (int count : {2, 5}) {
       AVSValue colors[] = {0.0f, 999.0f, 0.0f, 0.0f, 0.0f};
       AVSValue args[] = {"Y8", 16, 8, AVSValue(colors, count)};
       const char* names[] = {"pixel_type", "width", "height", "colors"};
-      for (const char* name : {"BlankClip", "IFBlankClip"}) {
+      for (const char* name : {"BlankClip", "BlankClip"}) {
         bool rejected = false;
         try {
           env->Invoke(name, AVSValue(args, 4), names);
@@ -231,13 +236,13 @@ void run_mode(Runtime& runtime, const char* plugin, const char* mode) {
     }
     for (int type : {VideoInfo::CS_YV12, VideoInfo::CS_BGR32}) {
       PClip source(new Sequence(env, type, 64, 48, false));
-      compare(env, "BlankClip", {source});
+      compare(reference_env, env, "BlankClip", {source});
       std::vector<AVSValue> args(13);
       args[12] = source;
       args[5] = 29.97;
       args[8] = 2;
       args[9] = "8bit";
-      compare(env, "BlankClip", args);
+      compare(reference_env, env, "BlankClip", args);
     }
     std::printf("mode '%s' passed (%d cases so far)\n", mode, cases);
   } catch (const AvisynthError& e) {

@@ -2,8 +2,14 @@
 #include "convolution/filters.h"
 #include "general_convolution.h"
 namespace aif::filters::convolution {
+const std::array<Registration, 1>& registrations() {
+  static const std::array<Registration, 1> functions = {{
+      {"GeneralConvolution", "c[bias]f[matrix]s[divisor]f[auto]b[luma]b[chroma]b[alpha]b", GeneralConvolution::Create,
+       nullptr},
+  }};
+  return functions;
+}
 void register_filters(IScriptEnvironment* env) {
-  env->AddFunction("IFGeneralConvolution", "c[bias]f[matrix]s[divisor]f[auto]b[luma]b[chroma]b[alpha]b",
-                   GeneralConvolution::Create, nullptr);
+  register_plugin(env, registrations());
 }
 } // namespace aif::filters::convolution
