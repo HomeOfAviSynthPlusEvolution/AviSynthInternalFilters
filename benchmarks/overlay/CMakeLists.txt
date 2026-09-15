@@ -1,0 +1,6 @@
+if(AIF_BUILD_FILTERS)
+ add_executable(aif_overlay_benchmark benchmark.cpp)
+ target_include_directories(aif_overlay_benchmark PRIVATE "${PROJECT_SOURCE_DIR}/src/overlay")
+ target_link_libraries(aif_overlay_benchmark PRIVATE AvsFilters::OverlayFilters)
+ aif_target_defaults(aif_overlay_benchmark)
+endif()
