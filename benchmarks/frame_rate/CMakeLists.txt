@@ -1,0 +1,7 @@
+if(AIF_BUILD_PLUGINS)
+add_executable(aif_frame_rate_benchmark benchmark.cpp)
+target_include_directories(aif_frame_rate_benchmark PRIVATE "${AIF_AVISYNTH_INCLUDE_DIR}")
+target_link_libraries(aif_frame_rate_benchmark PRIVATE ${CMAKE_DL_LIBS})
+aif_target_defaults(aif_frame_rate_benchmark)
+add_dependencies(aif_frame_rate_benchmark aif_frame_rate_plugin)
+endif()
