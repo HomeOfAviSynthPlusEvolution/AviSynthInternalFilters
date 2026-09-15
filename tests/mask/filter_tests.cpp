@@ -226,7 +226,8 @@ void run_mode(Runtime& runtime, const char* plugin, const char* mode) {
     auto frame = keyed->GetFrame(0, env);
     require(reinterpret_cast<const float*>(frame->GetReadPtr(PLANAR_A))[0] == 1.0f,
             "float key incorrectly matched below lower bound");
-    for (const char* script : {"BlankClip(pixel_type=\"RGBAPS\").ResetMask(Sqrt(-1.0))",
+    for (const char* script : {"BlankClip(pixel_type=\"RGB32\").ResetMask(opacity=0.5)",
+                               "BlankClip(pixel_type=\"RGBAPS\").ResetMask(Sqrt(-1.0))",
                                "BlankClip(pixel_type=\"YV12\").MaskHS(startHue=Sqrt(-1.0))"}) {
       bool rejected = false;
       try {
@@ -234,7 +235,7 @@ void run_mode(Runtime& runtime, const char* plugin, const char* mode) {
       } catch (const AvisynthError&) {
         rejected = true;
       }
-      require(rejected, "non-finite setup not rejected");
+      require(rejected, "invalid setup not rejected");
     }
     std::printf("mode '%s' passed (%d cases so far)\n", mode, cases);
   } catch (const AvisynthError& e) {

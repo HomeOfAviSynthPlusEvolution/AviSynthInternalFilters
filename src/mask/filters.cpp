@@ -9,7 +9,7 @@ const std::array<Registration, 4>& registrations() {
   static const std::array<Registration, 4> r = {
       {{"Mask", "cc", Mask::Create, nullptr},
        {"ColorKeyMask", "ci[]i[]i[]i", ColorKeyMask::Create, nullptr},
-       {"ResetMask", "c[mask]f[opacity]f", ResetMask::Create, nullptr},
+       {"ResetMask", "c[mask]f", ResetMask::Create, nullptr},
        {"MaskHS", "c[startHue]f[endHue]f[maxSat]f[minSat]f[coring]b[realcalc]b", MaskHS::Create, nullptr}}};
   return r;
 }
