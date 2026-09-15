@@ -1,0 +1,3 @@
+add_executable(aif_mask_benchmark benchmark.cpp)
+target_link_libraries(aif_mask_benchmark PRIVATE AvsFilters::MaskKernels)
+aif_target_defaults(aif_mask_benchmark)
