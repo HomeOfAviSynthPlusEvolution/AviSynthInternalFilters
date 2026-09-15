@@ -1,0 +1,76 @@
+// Avisynth v2.5.  Copyright 2002 Ben Rudiak-Gould et al.
+// http://avisynth.nl
+
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA, or visit
+// http://www.gnu.org/copyleft/gpl.html .
+//
+// Linking Avisynth statically or dynamically with other modules is making a
+// combined work based on Avisynth.  Thus, the terms and conditions of the GNU
+// General Public License cover the whole combination.
+//
+// As a special exception, the copyright holders of Avisynth give you
+// permission to link Avisynth with independent modules that communicate with
+// Avisynth solely through the interfaces defined in avisynth.h, regardless of the license
+// terms of these independent modules, and to copy and distribute the
+// resulting combined work under terms of your choice, provided that
+// every copy of the combined work is accompanied by a complete copy of
+// the source code of Avisynth (the version of Avisynth used to produce the
+// combined work), being distributed under the terms of the GNU General
+// Public License plus this exception.  An independent module is a module
+// which is not derived from or based on Avisynth, such as 3rd-party filters,
+// import and export plugins, or graphical user interfaces.
+
+#include "double_weave_frames.h"
+#include <avs/minmax.h>
+#include <algorithm>
+#include "kernel/copy_fields.h"
+namespace aif::filters::field {
+DoubleWeaveFrames::DoubleWeaveFrames(PClip _child) : GenericVideoFilter(_child) {
+  vi.num_frames = vi.num_frames > INT32_MAX / 2 ? INT32_MAX : vi.num_frames * 2;
+
+  vi.MulDivFPS(2, 1);
+}
+
+PVideoFrame DoubleWeaveFrames::GetFrame(int n, IScriptEnvironment* env) {
+  if (!(n & 1)) {
+    return child->GetFrame(n >> 1, env);
+  } else {
+    PVideoFrame a = child->GetFrame(n >> 1, env);
+    const int last_frame = child->GetVideoInfo().num_frames - 1;
+    PVideoFrame b = child->GetFrame(min((n + 1) >> 1, last_frame), env);
+    bool parity = this->GetParity(n);
+
+    if (a->IsWritable()) {
+      copy_alternate_lines(a, b, vi.IsYUV() || vi.IsYUVA(), vi.IsPlanarRGB() || vi.IsPlanarRGBA(), !parity, env);
+      return a;
+    } else if (b->IsWritable()) {
+      copy_alternate_lines(b, a, vi.IsYUV() || vi.IsYUVA(), vi.IsPlanarRGB() || vi.IsPlanarRGBA(), parity, env);
+      return b;
+    } else {
+      PVideoFrame result = env->NewVideoFrameP(vi, &a);
+      copy_alternate_lines(result, a, vi.IsYUV() || vi.IsYUVA(), vi.IsPlanarRGB() || vi.IsPlanarRGBA(), parity, env);
+      copy_alternate_lines(result, b, vi.IsYUV() || vi.IsYUVA(), vi.IsPlanarRGB() || vi.IsPlanarRGBA(), !parity, env);
+      return result;
+    }
+  }
+}
+bool __stdcall DoubleWeaveFrames::GetParity(int n) {
+  return child->GetParity(n >> 1) ^ (n & 1);
+}
+int __stdcall DoubleWeaveFrames::SetCacheHints(int cachehints, int frame_range) {
+  (void)frame_range;
+  return cachehints == CACHE_GET_MTMODE ? MT_NICE_FILTER : 0;
+}
+} // namespace aif::filters::field
