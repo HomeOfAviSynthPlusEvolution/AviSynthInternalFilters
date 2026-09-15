@@ -34,12 +34,15 @@
 
 #pragma once
 #include <avisynth.h>
+#include <cstdint>
 #include "kernel/types.h"
 class Levels : public GenericVideoFilter
 /**
   * Class for adjusting levels in a clip
  **/
 {
+  const uint32_t cpu_mask_;
+
 public:
   Levels(PClip _child, float _in_min, double _gamma, float _in_max, float _out_min, float _out_max, bool _coring,
          bool _dither, IScriptEnvironment* env);

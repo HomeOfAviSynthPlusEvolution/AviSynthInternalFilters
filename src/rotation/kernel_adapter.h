@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 #include <avisynth.h>
+#include "../common/host_cpu.h"
 #include "rotation/kernel.h"
 namespace aif::filters::rotation {
 inline constexpr uint32_t allowed_cpu_flags(uint64_t flags) {
@@ -33,14 +34,15 @@ inline constexpr uint32_t allowed_cpu_flags(uint64_t flags) {
 #endif
 }
 inline uint32_t allowed_cpu(IScriptEnvironment* env) {
-  return allowed_cpu_flags(env->GetCPUFlagsEx());
+  return allowed_cpu_flags(aif::filters::host_cpu_flags(env));
 }
 inline int pixel_bytes(const VideoInfo& vi) {
   return vi.IsYUY2() ? 0 : vi.IsPlanar() ? vi.ComponentSize() : vi.BytesFromPixels(1);
 }
-inline void apply(const PVideoFrame& s, PVideoFrame& d, int ps, int pd, int bytes, int op, IScriptEnvironment* env) {
+inline void apply(const PVideoFrame& s, PVideoFrame& d, int ps, int pd, int bytes, int op, IScriptEnvironment* env,
+                  uint32_t cpu_mask) {
   if (aif_rotation_apply(s->GetReadPtr(ps), d->GetWritePtr(pd), s->GetRowSize(ps), s->GetHeight(ps), s->GetPitch(ps),
-                         d->GetPitch(pd), bytes, op, allowed_cpu(env)))
+                         d->GetPitch(pd), bytes, op, cpu_mask))
     env->ThrowError("Rotation: invalid kernel input");
 }
 } // namespace aif::filters::rotation

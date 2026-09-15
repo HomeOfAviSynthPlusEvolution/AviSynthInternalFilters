@@ -40,10 +40,13 @@
 
 #pragma once
 #include <avisynth.h>
+#include "kernel_adapter.h"
 namespace aif::filters::rotation {
 class FlipVertical : public GenericVideoFilter {
+  const uint32_t cpu_mask_;
+
 public:
-  explicit FlipVertical(PClip c) : GenericVideoFilter(c) {}
+  explicit FlipVertical(PClip c, IScriptEnvironment* env) : GenericVideoFilter(c), cpu_mask_(allowed_cpu(env)) {}
   PVideoFrame __stdcall GetFrame(int n, IScriptEnvironment* env) override;
   int __stdcall SetCacheHints(int hint, int) override { return hint == CACHE_GET_MTMODE ? MT_NICE_FILTER : 0; }
   static AVSValue __cdecl Create(AVSValue args, void*, IScriptEnvironment* env);

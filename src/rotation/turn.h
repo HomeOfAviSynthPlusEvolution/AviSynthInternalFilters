@@ -40,8 +40,10 @@
 
 #pragma once
 #include <avisynth.h>
+#include <cstdint>
 namespace aif::filters::rotation {
 class Turn : public GenericVideoFilter {
+  const uint32_t cpu_mask_;
 
   int operation;
   int bytes;

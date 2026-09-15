@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 #include <avisynth.h>
+#include "../common/host_cpu.h"
 #include "crop/kernel.h"
 namespace aif::filters::crop {
 inline constexpr uint32_t allowed_cpu_flags(uint64_t flags) {
@@ -33,13 +34,13 @@ inline constexpr uint32_t allowed_cpu_flags(uint64_t flags) {
 #endif
 }
 inline uint32_t allowed_cpu(IScriptEnvironment* env) {
-  return allowed_cpu_flags(env->GetCPUFlagsEx());
+  return allowed_cpu_flags(aif::filters::host_cpu_flags(env));
 }
 inline void apply(const PVideoFrame& s, PVideoFrame& d, int plane, int left, int top, const void* p, int size,
-                  IScriptEnvironment* env) {
+                  IScriptEnvironment* env, uint32_t cpu_mask) {
   if (aif_crop_add_borders(s->GetReadPtr(plane), s->GetPitch(plane), s->GetRowSize(plane), s->GetHeight(plane),
                            d->GetWritePtr(plane), d->GetPitch(plane), d->GetRowSize(plane), d->GetHeight(plane), left,
-                           top, p, size, allowed_cpu(env)))
+                           top, p, size, cpu_mask))
     env->ThrowError("AddBorders: invalid kernel geometry");
 }
 } // namespace aif::filters::crop

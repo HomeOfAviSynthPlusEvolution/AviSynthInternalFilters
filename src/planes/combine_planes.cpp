@@ -23,6 +23,14 @@ CombinePlanes::CombinePlanes(PClip _child, PClip _clip2, PClip _clip3, PClip _cl
                              const char* _target_planes_str, const char* _source_planes_str, const char* _pixel_type,
                              IScriptEnvironment* env)
     : GenericVideoFilter(_child) {
+  // v8/v9 reserve these linkage slots, but do not implement AmendPixelType.
+  // A linkage Size check alone cannot distinguish a reserved null slot.
+  has_frame_pixel_type_ = true;
+  try {
+    env->CheckVersion(10);
+  } catch (const AvisynthError&) {
+    has_frame_pixel_type_ = false;
+  }
   clips[0] = _child;
   clips[1] = _clip2;
   clips[2] = _clip3;
@@ -330,7 +338,8 @@ PVideoFrame __stdcall CombinePlanes::GetFrame(int n, IScriptEnvironment* env) {
     }
 
     // RGB(A)<->YUV(A) color space conversion can't be caught by Subframe...()
-    dst->AmendPixelType(vi.pixel_type);
+    if (has_frame_pixel_type_)
+      dst->AmendPixelType(vi.pixel_type);
 
     return dst;
   }
@@ -345,7 +354,8 @@ PVideoFrame __stdcall CombinePlanes::GetFrame(int n, IScriptEnvironment* env) {
     // luma (Y) comes w/o BitBlt. Only U and V (and optionally A) is copied.
     if (src->IsWritable()) // we are the only one
     {
-      src->AmendPixelType(vi.pixel_type);
+      if (has_frame_pixel_type_)
+        src->AmendPixelType(vi.pixel_type);
 
       PVideoFrame src_other = nullptr;
       bool writeptr_obtained = false;
@@ -396,7 +406,8 @@ PVideoFrame __stdcall CombinePlanes::GetFrame(int n, IScriptEnvironment* env) {
         (vi.NumComponents() < 4 || (vi.NumComponents() == 4 && target_planes[3] == source_planes[3]))) {
       if (src1->IsWritable()) // we are the only one
       {
-        src1->AmendPixelType(vi.pixel_type);
+        if (has_frame_pixel_type_)
+          src1->AmendPixelType(vi.pixel_type);
 
         src1->GetWritePtr(PLANAR_Y); //Must be requested BUT only if we actually do something
 

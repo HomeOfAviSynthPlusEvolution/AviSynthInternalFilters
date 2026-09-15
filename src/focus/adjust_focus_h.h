@@ -35,6 +35,7 @@
 #pragma once
 
 #include <avisynth.h>
+#include <cstdint>
 
 namespace aif::filters::focus {
 
@@ -43,8 +44,10 @@ class AdjustFocusH : public GenericVideoFilter
  * Class to adjust focus in the horizontal direction, helper for sharpen/blur
  **/
 {
+  const uint32_t cpu_mask_;
+
 public:
-  AdjustFocusH(double _amount, PClip _child);
+  AdjustFocusH(double _amount, PClip _child, IScriptEnvironment* env);
   PVideoFrame __stdcall GetFrame(int n, IScriptEnvironment* env) override;
 
   int __stdcall SetCacheHints(int cachehints, int frame_range) override {

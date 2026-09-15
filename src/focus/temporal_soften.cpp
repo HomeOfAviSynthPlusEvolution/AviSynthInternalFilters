@@ -43,8 +43,9 @@ using std::min;
 
 TemporalSoften::TemporalSoften(PClip _child, unsigned radius, unsigned luma_thresh, unsigned chroma_thresh,
                                int _scenechange, IScriptEnvironment* env)
-    : GenericVideoFilter(_child), scenechange(_scenechange), luma_threshold(min(luma_thresh, 255u)),
-      chroma_threshold(min(chroma_thresh, 255u)), kernel(2 * min(radius, (unsigned int)MAX_RADIUS) + 1) {
+    : GenericVideoFilter(_child), cpu_mask_(allowed_cpu(env)), scenechange(_scenechange),
+      luma_threshold(min(luma_thresh, 255u)), chroma_threshold(min(chroma_thresh, 255u)),
+      kernel(2 * min(radius, (unsigned int)MAX_RADIUS) + 1) {
 
   child->SetCacheHints(CACHE_WINDOW, kernel);
 
@@ -175,8 +176,7 @@ PVideoFrame TemporalSoften::GetFrame(int n, IScriptEnvironment* env) {
       for (int i = radius - 1; i >= 0; i--) { // Check frames backwards
         if ((!skiprest) && (!planeDisabled[i])) {
           int64_t sad = 0;
-          checked(aif_focus_sad(c_plane, planeP[i], pitch, planePitch[i], rowsize, h, bits_per_pixel, allowed_cpu(env),
-                                &sad),
+          checked(aif_focus_sad(c_plane, planeP[i], pitch, planePitch[i], rowsize, h, bits_per_pixel, cpu_mask_, &sad),
                   env);
           if (sad < scenechange) {
             planePitch2[d2] = planePitch[i];
@@ -193,8 +193,7 @@ PVideoFrame TemporalSoften::GetFrame(int n, IScriptEnvironment* env) {
       for (int i = radius; i < 2 * radius; i++) { // Check forward frames
         if ((!skiprest) && (!planeDisabled[i])) { // Disable this frame on next plane (so that Y can affect UV)
           int64_t sad = 0;
-          checked(aif_focus_sad(c_plane, planeP[i], pitch, planePitch[i], rowsize, h, bits_per_pixel, allowed_cpu(env),
-                                &sad),
+          checked(aif_focus_sad(c_plane, planeP[i], pitch, planePitch[i], rowsize, h, bits_per_pixel, cpu_mask_, &sad),
                   env);
           if (sad < scenechange) {
             planePitch2[d2] = planePitch[i];
@@ -229,11 +228,11 @@ PVideoFrame TemporalSoften::GetFrame(int n, IScriptEnvironment* env) {
       for (int y = 0; y < h; y++) { // One line at the time
         if (vi.IsYUY2()) {
           checked(aif_focus_temporal_line(c_plane, planeP, d, rowsize, bits_per_pixel, AIF_FOCUS_YUY2, luma_threshold,
-                                          chroma_threshold, allowed_cpu(env)),
+                                          chroma_threshold, cpu_mask_),
                   env);
         } else {
           checked(aif_focus_temporal_line(c_plane, planeP, d, rowsize, bits_per_pixel, AIF_FOCUS_PLANAR, current_thresh,
-                                          current_thresh, allowed_cpu(env)),
+                                          current_thresh, cpu_mask_),
                   env);
         }
         for (int p = 0; p < d; p++)

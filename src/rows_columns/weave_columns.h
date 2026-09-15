@@ -34,12 +34,15 @@
 
 #pragma once
 #include <avisynth.h>
+#include <cstdint>
 namespace aif::filters::rows_columns {
 class WeaveColumns : public GenericVideoFilter
 /**
     * Class to weave columns of video
     **/
 {
+  const uint32_t cpu_mask_;
+
 private:
   const int period;
   const int inframes;

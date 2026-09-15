@@ -37,7 +37,7 @@
 #include <limits>
 namespace aif::filters::rows_columns {
 SeparateColumns::SeparateColumns(PClip _child, int _interval, IScriptEnvironment* env)
-    : GenericVideoFilter(_child), interval(_interval) {
+    : GenericVideoFilter(_child), cpu_mask_(allowed_cpu_flags(aif::filters::host_cpu_flags(env))), interval(_interval) {
   if (_interval <= 0)
     env->ThrowError("SeparateColumns: interval must be greater than zero.");
 
@@ -68,7 +68,7 @@ SeparateColumns::SeparateColumns(PClip _child, int _interval, IScriptEnvironment
 
 PVideoFrame SeparateColumns::GetFrame(int n, IScriptEnvironment* env) {
   PVideoFrame src = child->GetFrame(n / interval, env), dst = env->NewVideoFrameP(vi, &src);
-  column_frame({src}, dst, vi, interval, n % interval, false, env);
+  column_frame({src}, dst, vi, interval, n % interval, false, env, cpu_mask_);
   return dst;
 }
 AVSValue __cdecl SeparateColumns::Create(AVSValue args, void*, IScriptEnvironment* env) {

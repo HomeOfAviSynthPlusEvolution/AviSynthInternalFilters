@@ -42,6 +42,8 @@ class GeneralConvolution : public GenericVideoFilter
  **/
 {
 
+  const uint32_t cpu_mask_;
+
 public:
   GeneralConvolution(PClip _child, double _divisor, float _nBias, const char* _matrix, bool _autoscale, bool _luma,
                      bool _chroma, bool _alpha, IScriptEnvironment* _env);

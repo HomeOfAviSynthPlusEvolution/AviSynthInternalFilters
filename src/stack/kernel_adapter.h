@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 #include <avisynth.h>
+#include "../common/host_cpu.h"
 #include "blank_clip/kernel.h"
 namespace aif::filters::stack {
 inline constexpr uint32_t allowed_cpu_flags(uint64_t flags) {
@@ -33,6 +34,6 @@ inline constexpr uint32_t allowed_cpu_flags(uint64_t flags) {
 #endif
 }
 inline uint32_t allowed_cpu(IScriptEnvironment* env) {
-  return allowed_cpu_flags(env->GetCPUFlagsEx());
+  return allowed_cpu_flags(aif::filters::host_cpu_flags(env));
 }
 } // namespace aif::filters::stack

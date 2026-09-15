@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 #include <avisynth.h>
+#include "../common/host_cpu.h"
 #include "channel_display/kernel.h"
 #include <blank_clip/kernel.h>
 #include <array>
@@ -54,43 +55,46 @@ inline constexpr uint32_t allowed_cpu_flags(uint64_t flags) {
 #endif
 }
 inline uint32_t cpu(IScriptEnvironment* env) {
-  return allowed_cpu_flags(env->GetCPUFlagsEx());
+  return allowed_cpu_flags(aif::filters::host_cpu_flags(env));
 }
 inline void render(const uint8_t* s, int sp, const uint8_t* a, int ap, std::array<uint8_t*, 4> d, std::array<int, 4> dp,
-                   int w, int h, int b, int sc, int dc, int c, IScriptEnvironment* env) {
-  if (aif_channel_display_render(s, sp, a, ap, d.data(), dp.data(), w, h, b, sc, dc, c, cpu(env)))
+                   int w, int h, int b, int sc, int dc, int c, IScriptEnvironment* env, uint32_t cpu_mask) {
+  if (aif_channel_display_render(s, sp, a, ap, d.data(), dp.data(), w, h, b, sc, dc, c, cpu_mask))
     env->ThrowError("ShowChannel: layout failed");
 }
 template <class T>
-void fill_plane(uint8_t* p, int h, int row, int pitch, T v, IScriptEnvironment* env) {
-  if (aif_blank_clip_fill(p, pitch, row, h, &v, sizeof(T), cpu(env)))
+void fill_plane(uint8_t* p, int h, int row, int pitch, T v, IScriptEnvironment* env, uint32_t cpu_mask) {
+  if (aif_blank_clip_fill(p, pitch, row, h, &v, sizeof(T), cpu_mask))
     env->ThrowError("ShowChannel: fill failed");
 }
 template <class T>
-void fill_chroma(uint8_t* u, uint8_t* v, int h, int row, int pitch, T value, IScriptEnvironment* env) {
-  fill_plane(u, h, row, pitch, value, env);
-  fill_plane(v, h, row, pitch, value, env);
+void fill_chroma(uint8_t* u, uint8_t* v, int h, int row, int pitch, T value, IScriptEnvironment* env,
+                 uint32_t cpu_mask) {
+  fill_plane(u, h, row, pitch, value, env, cpu_mask);
+  fill_plane(v, h, row, pitch, value, env, cpu_mask);
 }
 template <class T, bool SA, bool DA>
 void planar_to_packedrgb(uint8_t* d, int dp, const uint8_t* s, const uint8_t* a, int sp, int w, int h,
-                         IScriptEnvironment* env) {
+                         IScriptEnvironment* env, uint32_t cpu_mask) {
   render(s, sp, SA ? a : nullptr, sp, {d, nullptr, nullptr, nullptr}, {dp, 0, 0, 0}, w, h, sizeof(T), 1, DA ? 4 : 3, 0,
-         env);
+         env, cpu_mask);
 }
 template <class T, bool SA, bool DA>
-void packed_to_packedrgb(uint8_t* d, int dp, const uint8_t* s, int sp, int w, int h, int c, IScriptEnvironment* env) {
+void packed_to_packedrgb(uint8_t* d, int dp, const uint8_t* s, int sp, int w, int h, int c, IScriptEnvironment* env,
+                         uint32_t cpu_mask) {
   render(s, sp, nullptr, 0, {d, nullptr, nullptr, nullptr}, {dp, 0, 0, 0}, w, h, sizeof(T), SA ? 4 : 3, DA ? 4 : 3, c,
-         env);
+         env, cpu_mask);
 }
 template <class T, bool SA, bool DA>
 void packed_to_planarrgb(uint8_t* r, uint8_t* g, uint8_t* b, uint8_t* a, int dp, const uint8_t* s, int sp, int w, int h,
-                         int c, IScriptEnvironment* env) {
-  render(s, sp, nullptr, 0, {r, g, b, DA ? a : nullptr}, {dp, dp, dp, dp}, w, h, sizeof(T), SA ? 4 : 3, 1, c, env);
+                         int c, IScriptEnvironment* env, uint32_t cpu_mask) {
+  render(s, sp, nullptr, 0, {r, g, b, DA ? a : nullptr}, {dp, dp, dp, dp}, w, h, sizeof(T), SA ? 4 : 3, 1, c, env,
+         cpu_mask);
 }
 template <class T, bool SA, bool DA>
 void packed_to_luma_alpha(uint8_t* d, uint8_t* a, int dp, const uint8_t* s, int sp, int w, int h, int c,
-                          IScriptEnvironment* env) {
+                          IScriptEnvironment* env, uint32_t cpu_mask) {
   render(s, sp, nullptr, 0, {d, nullptr, nullptr, DA ? a : nullptr}, {dp, 0, 0, dp}, w, h, sizeof(T), SA ? 4 : 3, 1, c,
-         env);
+         env, cpu_mask);
 }
 } // namespace aif::filters::channel_display

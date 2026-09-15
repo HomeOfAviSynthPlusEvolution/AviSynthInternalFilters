@@ -7,9 +7,12 @@
 
 #include <avisynth.h>
 #include <cstdint>
+#include <cstdint>
 
 namespace aif::filters::crop {
 class AddBorders final : public GenericVideoFilter {
+  const uint32_t cpu_mask_;
+
 public:
   AddBorders(const int left, const int top, const int right, const int bottom, const int color, const bool color_is_yuv,
              PClip child, IScriptEnvironment* env);

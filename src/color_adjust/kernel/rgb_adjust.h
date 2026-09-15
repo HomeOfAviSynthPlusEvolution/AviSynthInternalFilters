@@ -120,12 +120,12 @@ static void fill_accum_rgb_packed_c(const BYTE* srcp, int pitch, unsigned int* a
 
 template <typename pixel_t, int pixel_step, bool dither>
 static void apply_map_rgb_packed_c(BYTE* dstp8, int pitch, BYTE* mapR, BYTE* mapG, BYTE* mapB, BYTE* mapA, int width,
-                                   int height, int, IScriptEnvironment* env) {
+                                   int height, int, IScriptEnvironment* env, uint32_t cpu_mask) {
   if constexpr (!dither) {
     const BYTE* maps[4] = {mapB, mapG, mapR, mapA};
     for (int c = 0; c < pixel_step; ++c) {
       auto* p = dstp8 + c * sizeof(pixel_t);
-      map_channel(p, pitch, p, pitch, width, height, maps[c], sizeof(pixel_t) == 1 ? 8 : 16, pixel_step, env);
+      map_channel(p, pitch, p, pitch, width, height, maps[c], sizeof(pixel_t) == 1 ? 8 : 16, pixel_step, env, cpu_mask);
     }
     return;
   }
@@ -158,12 +158,13 @@ static void apply_map_rgb_packed_c(BYTE* dstp8, int pitch, BYTE* mapR, BYTE* map
 template <typename pixel_t, bool hasAlpha, bool dither>
 static void apply_map_rgb_planar_c(BYTE* dstpR8, BYTE* dstpG8, BYTE* dstpB8, BYTE* dstpA8, int pitch, BYTE* mapR,
                                    BYTE* mapG, BYTE* mapB, BYTE* mapA, int width, int height, int,
-                                   IScriptEnvironment* env) {
+                                   IScriptEnvironment* env, uint32_t cpu_mask) {
   if constexpr (!dither) {
     BYTE* planes[4] = {dstpR8, dstpG8, dstpB8, dstpA8};
     const BYTE* maps[4] = {mapR, mapG, mapB, mapA};
     for (int c = 0; c < (hasAlpha ? 4 : 3); ++c)
-      map_channel(planes[c], pitch, planes[c], pitch, width, height, maps[c], sizeof(pixel_t) == 1 ? 8 : 16, 1, env);
+      map_channel(planes[c], pitch, planes[c], pitch, width, height, maps[c], sizeof(pixel_t) == 1 ? 8 : 16, 1, env,
+                  cpu_mask);
     return;
   }
 

@@ -3,6 +3,7 @@
 // Copyright (C) 2026 AviSynthPlus-IF contributors
 // Derived from AviSynthPlus avs_core/filters/transform.cpp.
 
+#include "../common/host_properties.h"
 #include "add_borders.h"
 
 #include "crop.h"
@@ -186,7 +187,7 @@ struct TransientResampler {
     return "center";
   }
 
-  switch (static_cast<int>(env->propGetIntSaturated(properties, "_ChromaLocation", 0, nullptr))) {
+  switch (static_cast<int>(aif::filters::property_int(env, properties, "_ChromaLocation", 0, nullptr))) {
     case 0:
       return "left";
     case 1:
@@ -215,7 +216,13 @@ struct TransientResampler {
   arguments[2] = AVSValue(height);
 
   const auto invoke = [&](const char* const name, const int count) {
-    return env->Invoke(name, AVSValue(arguments.data(), count)).AsClip();
+    try {
+      return env->Invoke(name, AVSValue(arguments.data(), count)).AsClip();
+    } catch (const IScriptEnvironment::NotFound&) {
+      env->ThrowError("AddBorders: transient resampling requires %s with force, keep_center and placement support",
+                      name);
+      return PClip{};
+    }
   };
   const auto set_common_tail = [&](const int force_index, const int keep_center_index, const int placement_index) {
     arguments[force_index] = AVSValue(force);
@@ -288,8 +295,8 @@ struct TransientResampler {
 
 AddBorders::AddBorders(const int left, const int top, const int right, const int bottom, const int color,
                        const bool color_is_yuv, PClip child, IScriptEnvironment* env)
-    : GenericVideoFilter(std::move(child)), left_(left), top_(top), right_(right), bottom_(bottom),
-      color_(static_cast<std::uint32_t>(color)), color_is_yuv_(color_is_yuv) {
+    : GenericVideoFilter(std::move(child)), cpu_mask_(allowed_cpu(env)), left_(left), top_(top), right_(right),
+      bottom_(bottom), color_(static_cast<std::uint32_t>(color)), color_is_yuv_(color_is_yuv) {
   is_yuv_ = vi.IsYUV() || vi.IsYUVA();
   is_planar_rgb_ = vi.IsPlanarRGB() || vi.IsPlanarRGBA();
   if (is_yuv_) {
@@ -365,7 +372,7 @@ void AddBorders::add_planar_borders(const PVideoFrame& source, PVideoFrame& dest
     const auto sample =
         native_sample(colors[static_cast<std::size_t>(index)], !is_yuv_, vi.BitsPerComponent(), chroma, component_size);
     apply(source, destination, plane, (left_ >> plane_xsub) * component_size, top_ >> plane_ysub, sample.data(),
-          component_size, env);
+          component_size, env, cpu_mask_);
   }
 }
 
@@ -404,7 +411,8 @@ void AddBorders::add_packed_borders(const PVideoFrame& source, PVideoFrame& dest
     pattern_size = static_cast<std::size_t>(components * 2);
   }
 
-  apply(source, destination, DEFAULT_PLANE, vi.BytesFromPixels(left_), top_, pattern.data(), int(pattern_size), env);
+  apply(source, destination, DEFAULT_PLANE, vi.BytesFromPixels(left_), top_, pattern.data(), int(pattern_size), env,
+        cpu_mask_);
 }
 namespace {
 struct TransientBarSection {
@@ -439,6 +447,10 @@ struct TransientBarTemplate {
     return child;
   }
 
+  if (!env->FunctionExists("MultiOverlay")) {
+    env->ThrowError(
+        "AddBorders: transient resampling (r != 0) requires a host with MultiOverlay and extended resize support");
+  }
   const bool both_sides = radius_value > 0;
   int filtering_radius = radius_value < 0 ? -radius_value : radius_value;
   const VideoInfo& vi = child->GetVideoInfo();

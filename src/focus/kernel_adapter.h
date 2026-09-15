@@ -35,6 +35,7 @@
 #pragma once
 
 #include <avisynth.h>
+#include "../common/host_cpu.h"
 #include "cpu_policy.h"
 #include "focus/kernel.h"
 
@@ -46,7 +47,7 @@ inline uint32_t allowed_cpu(IScriptEnvironment* env) {
 #else
   constexpr bool arm = false;
 #endif
-  return host_cpu_mask(env->GetCPUFlagsEx(), arm) & aif_focus_supported_cpu();
+  return host_cpu_mask(aif::filters::host_cpu_flags(env), arm) & aif_focus_supported_cpu();
 }
 
 inline void checked(int result, IScriptEnvironment* env) {

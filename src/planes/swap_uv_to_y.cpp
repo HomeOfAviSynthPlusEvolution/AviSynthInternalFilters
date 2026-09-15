@@ -80,7 +80,8 @@ AVSValue __cdecl SwapUVToY::CreatePlaneToY8(AVSValue args, void*, IScriptEnviron
   return CreateAnyToY8(args, (void*)(intptr_t)mode, env);
 }
 
-SwapUVToY::SwapUVToY(PClip _child, int _mode, IScriptEnvironment* env) : GenericVideoFilter(_child), mode(_mode) {
+SwapUVToY::SwapUVToY(PClip _child, int _mode, IScriptEnvironment* env)
+    : GenericVideoFilter(_child), cpu_mask_(cpu(env)), mode(_mode) {
   bool YUVmode = mode == YToY8 || mode == UToY8 || mode == VToY8 || mode == UToY || mode == VToY || mode == YUY2UToY8 ||
                  mode == YUY2VToY8;
   bool RGBmode = mode == RToY8 || mode == GToY8 || mode == BToY8;
@@ -195,7 +196,7 @@ PVideoFrame __stdcall SwapUVToY::GetFrame(int n, IScriptEnvironment* env) {
 
     if (!vi.IsYUY2())
       env->propDeleteKey(env->getFramePropsRW(dst), "_ChromaLocation");
-    if (aif_planes_extract_uv(srcp, src_pitch, dstp, dst_pitch, vi.width, vi.height, pos == 3, vi.IsYUY2(), cpu(env)))
+    if (aif_planes_extract_uv(srcp, src_pitch, dstp, dst_pitch, vi.width, vi.height, pos == 3, vi.IsYUY2(), cpu_mask_))
       env->ThrowError("PlaneToY: invalid YUY2 frame");
     return dst;
   }
@@ -214,13 +215,13 @@ PVideoFrame __stdcall SwapUVToY::GetFrame(int n, IScriptEnvironment* env) {
   BYTE* dstp_v = dst->GetWritePtr(PLANAR_V);
 
   if (vi.ComponentSize() == 1) { // 8bit
-    fill_chroma<BYTE>(dstp_u, dstp_v, height, rowsize, pitch, 0x80, env);
+    fill_chroma<BYTE>(dstp_u, dstp_v, height, rowsize, pitch, 0x80, env, cpu_mask_);
   } else if (vi.ComponentSize() == 2) {                   // 16bit
     uint16_t grey_val = 1 << (vi.BitsPerComponent() - 1); // 0x8000 for 16 bit
-    fill_chroma<uint16_t>(dstp_u, dstp_v, height, rowsize, pitch, grey_val, env);
+    fill_chroma<uint16_t>(dstp_u, dstp_v, height, rowsize, pitch, grey_val, env, cpu_mask_);
   } else { // 32bit(float)
     float grey_val = uv8tof(128);
-    fill_chroma<float>(dstp_u, dstp_v, height, rowsize, pitch, grey_val, env);
+    fill_chroma<float>(dstp_u, dstp_v, height, rowsize, pitch, grey_val, env, cpu_mask_);
   }
 
   return dst;

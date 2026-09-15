@@ -39,7 +39,8 @@
 #include <memory>
 
 namespace aif::filters::focus {
-AdjustFocusV::AdjustFocusV(double _amount, PClip _child) : GenericVideoFilter(_child), amountd(pow(2.0, _amount)) {
+AdjustFocusV::AdjustFocusV(double _amount, PClip _child, IScriptEnvironment* env)
+    : GenericVideoFilter(_child), cpu_mask_(allowed_cpu(env)), amountd(pow(2.0, _amount)) {
   half_amount = int(32768 * amountd + 0.5);
 }
 
@@ -63,7 +64,7 @@ PVideoFrame __stdcall AdjustFocusV::GetFrame(int n, IScriptEnvironment* env) {
     const int p = vi.IsPlanar() ? planes[i] : 0;
     checked(aif_focus_vertical(frame->GetWritePtr(p), frame->GetPitch(p), frame->GetRowSize(p), frame->GetHeight(p),
                                vi.BitsPerComponent(), half_amount, static_cast<float>(amountd), scratch, scratch_size,
-                               allowed_cpu(env)),
+                               cpu_mask_),
             env);
   }
   return frame;

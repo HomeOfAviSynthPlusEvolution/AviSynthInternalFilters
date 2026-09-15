@@ -37,7 +37,8 @@
 #include <limits>
 namespace aif::filters::rows_columns {
 WeaveColumns::WeaveColumns(PClip _child, int _period, IScriptEnvironment* env)
-    : GenericVideoFilter(_child), period(_period), inframes(vi.num_frames) {
+    : GenericVideoFilter(_child), cpu_mask_(allowed_cpu_flags(aif::filters::host_cpu_flags(env))), period(_period),
+      inframes(vi.num_frames) {
   if (_period <= 0)
     env->ThrowError("WeaveColumns: period must be greater than zero.");
 
@@ -54,7 +55,7 @@ PVideoFrame WeaveColumns::GetFrame(int n, IScriptEnvironment* env) {
   for (int m = 0; m < period; ++m)
     frames.push_back(child->GetFrame(std::min(int64_t(n) * period + m, int64_t(inframes - 1)), env));
   PVideoFrame dst = env->NewVideoFrameP(vi, &frames[0]);
-  column_frame(frames, dst, vi, period, 0, true, env);
+  column_frame(frames, dst, vi, period, 0, true, env, cpu_mask_);
   return dst;
 }
 AVSValue __cdecl WeaveColumns::Create(AVSValue args, void*, IScriptEnvironment* env) {

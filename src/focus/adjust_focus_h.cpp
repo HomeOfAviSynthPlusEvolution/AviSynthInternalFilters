@@ -45,7 +45,8 @@ static int layout(const VideoInfo& vi) {
   return vi.IsRGB24() || vi.IsRGB48() ? AIF_FOCUS_RGB3 : AIF_FOCUS_RGB4;
 }
 
-AdjustFocusH::AdjustFocusH(double _amount, PClip _child) : GenericVideoFilter(_child), amountd(pow(2.0, _amount)) {
+AdjustFocusH::AdjustFocusH(double _amount, PClip _child, IScriptEnvironment* env)
+    : GenericVideoFilter(_child), cpu_mask_(allowed_cpu(env)), amountd(pow(2.0, _amount)) {
   half_amount = int(32768 * amountd + 0.5);
 }
 
@@ -65,7 +66,7 @@ PVideoFrame __stdcall AdjustFocusH::GetFrame(int n, IScriptEnvironment* env) {
     }
     checked(aif_focus_horizontal(src->GetReadPtr(p), src->GetPitch(p), dst->GetWritePtr(p), dst->GetPitch(p),
                                  src->GetRowSize(p), src->GetHeight(p), vi.BitsPerComponent(), layout(vi), half_amount,
-                                 static_cast<float>(amountd), allowed_cpu(env)),
+                                 static_cast<float>(amountd), cpu_mask_),
             env);
   }
   return dst;

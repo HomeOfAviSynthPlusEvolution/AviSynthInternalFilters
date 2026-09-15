@@ -39,9 +39,9 @@
 Tweak::Tweak(PClip _child, double _hue, double _sat, double _bright, double _cont, bool _coring, double _startHue,
              double _endHue, double _maxSat, double _minSat, double p, bool _dither, bool _realcalc,
              double _dither_strength, IScriptEnvironment* env)
-    : GenericVideoFilter(_child), coring(_coring), dither(_dither), realcalc(_realcalc), dhue(_hue), dsat(_sat),
-      dbright(_bright), dcont(_cont), dstartHue(_startHue), dendHue(_endHue), dmaxSat(_maxSat), dminSat(_minSat),
-      dinterp(p), dither_strength((float)_dither_strength) {
+    : GenericVideoFilter(_child), cpu_mask_(color_cpu(env)), coring(_coring), dither(_dither), realcalc(_realcalc),
+      dhue(_hue), dsat(_sat), dbright(_bright), dcont(_cont), dstartHue(_startHue), dendHue(_endHue), dmaxSat(_maxSat),
+      dminSat(_minSat), dinterp(p), dither_strength((float)_dither_strength) {
   if (vi.IsRGB())
     env->ThrowError("Tweak: YUV data only (no RGB)");
 
@@ -386,7 +386,7 @@ PVideoFrame __stdcall Tweak::GetFrame(int n, IScriptEnvironment* env) {
           }
         }
       } else {
-        map_channel(srcp, src_pitch, srcp, src_pitch, width, height, map, pixelsize == 1 ? 8 : 16, 1, env);
+        map_channel(srcp, src_pitch, srcp, src_pitch, width, height, map, pixelsize == 1 ? 8 : 16, 1, env, cpu_mask_);
       }
     }
     // Y: brightness and contrast done

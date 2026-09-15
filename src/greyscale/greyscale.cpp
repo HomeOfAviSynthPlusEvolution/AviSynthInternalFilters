@@ -1,3 +1,4 @@
+#include "../common/host_properties.h"
 #include "kernel_adapter.h"
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Derived from AviSynthPlus and the earlier AviSynthPlus-IF adapter.
@@ -166,7 +167,7 @@ struct OldMatrix {
   ColorRange default_destination_range = ColorRange::full;
   if (properties != nullptr && env->propNumElements(properties, "_ColorRange") > 0) {
     const auto property_range =
-        color_range_from_property(env->propGetIntSaturated(properties, "_ColorRange", 0, nullptr));
+        color_range_from_property(aif::filters::property_int(env, properties, "_ColorRange", 0, nullptr));
     if (!property_range.has_value()) {
       env->ThrowError("GreyScale: Unknown matrix.");
     }

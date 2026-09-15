@@ -626,12 +626,12 @@ static void coloryuv_autowhite(const ColorYUVPlaneData* /*dY*/, const ColorYUVPl
 
 // only for integer samples
 static void coloryuv_apply_lut_planar(BYTE* dst, const BYTE* src, int dp, int sp, int w, int h, const BYTE* lut,
-                                      int bits, IScriptEnvironment* env) {
-  map_channel(dst, dp, src, sp, w, h, lut, bits, 1, env);
+                                      int bits, IScriptEnvironment* env, uint32_t cpu_mask) {
+  map_channel(dst, dp, src, sp, w, h, lut, bits, 1, env, cpu_mask);
 }
 static void coloryuv_apply_lut_yuy2(BYTE* dst, const BYTE* src, int dp, int sp, int w, int h, const BYTE* y,
-                                    const BYTE* u, const BYTE* v, IScriptEnvironment* env) {
-  map_channel(dst, dp, src, sp, w, h, y, 8, 2, env);
-  map_channel(dst + 1, dp, src + 1, sp, w / 2, h, u, 8, 4, env);
-  map_channel(dst + 3, dp, src + 3, sp, w / 2, h, v, 8, 4, env);
+                                    const BYTE* u, const BYTE* v, IScriptEnvironment* env, uint32_t cpu_mask) {
+  map_channel(dst, dp, src, sp, w, h, y, 8, 2, env, cpu_mask);
+  map_channel(dst + 1, dp, src + 1, sp, w / 2, h, u, 8, 4, env, cpu_mask);
+  map_channel(dst + 3, dp, src + 3, sp, w / 2, h, v, 8, 4, env, cpu_mask);
 }

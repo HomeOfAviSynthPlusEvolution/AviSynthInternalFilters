@@ -34,6 +34,7 @@
 
 #pragma once
 #include <avisynth.h>
+#include <cstdint>
 enum { COLORYUV_RANGE_NONE, COLORYUV_RANGE_TV_PC, COLORYUV_RANGE_PC_TV, COLORYUV_RANGE_PC_TVY };
 
 struct ColorYUVPlaneData {
@@ -51,6 +52,8 @@ struct ColorYUVPlaneConfig {
 };
 
 class ColorYUV : public GenericVideoFilter {
+  const uint32_t cpu_mask_;
+
 public:
   ColorYUV(PClip child, double gain_y, double offset_y, double gamma_y, double contrast_y, double gain_u,
            double offset_u, double gamma_u, double contrast_u, double gain_v, double offset_v, double gamma_v,

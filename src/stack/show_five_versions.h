@@ -34,6 +34,7 @@
 
 #pragma once
 #include <avisynth.h>
+#include <cstdint>
 #include <vector>
 namespace aif::filters::stack {
 class ShowFiveVersions : public IClip
@@ -41,6 +42,8 @@ class ShowFiveVersions : public IClip
   * Class to show every pulldown combination
  **/
 {
+  const uint32_t cpu_mask_;
+
 public:
   ShowFiveVersions(PClip* children, IScriptEnvironment* env);
   PVideoFrame __stdcall GetFrame(int n, IScriptEnvironment* env);

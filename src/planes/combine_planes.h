@@ -20,6 +20,7 @@ public:
   static AVSValue __cdecl CreateCombinePlanes(AVSValue args, void* user_data, IScriptEnvironment* env);
 
 private:
+  bool has_frame_pixel_type_;
   PClip clips[4];
   int pixelsize;
   int bits_per_pixel;

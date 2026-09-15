@@ -1,5 +1,6 @@
 #pragma once
 #include <avisynth.h>
+#include "../common/host_cpu.h"
 #include <memory>
 #include "merge/kernel.h"
 namespace aif::filters::merge {
@@ -33,7 +34,7 @@ inline constexpr uint32_t allowed_cpu_flags(uint64_t flags) {
 #endif
 }
 inline uint32_t allowed_cpu(IScriptEnvironment* env) {
-  return allowed_cpu_flags(env->GetCPUFlagsEx());
+  return allowed_cpu_flags(aif::filters::host_cpu_flags(env));
 }
 using MergePlan = std::unique_ptr<aif_merge_plan, decltype(&aif_merge_destroy)>;
 inline MergePlan make_plan(IScriptEnvironment* env) {

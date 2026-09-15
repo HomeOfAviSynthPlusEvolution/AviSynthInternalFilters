@@ -149,8 +149,8 @@ constexpr std::array kPixelTypeNames{
   return VideoInfo::CS_UNKNOWN;
 }
 
-FillTarget writable_view(PVideoFrame& frame, int plane, IScriptEnvironment* env) {
-  return {frame, plane, env};
+FillTarget writable_view(PVideoFrame& frame, int plane, IScriptEnvironment* env, uint32_t cpu_mask) {
+  return {frame, plane, env, cpu_mask};
 }
 [[nodiscard]] std::uint8_t byte_component(const int value) noexcept {
   return static_cast<std::uint8_t>(value & 0xFF);
@@ -169,8 +169,8 @@ FillTarget writable_view(PVideoFrame& frame, int plane, IScriptEnvironment* env)
 }
 
 void fill_planar_component(PVideoFrame& frame, const int plane, const VideoInfo& video_info, const int integer_value,
-                           const float float_value, IScriptEnvironment* const env) {
-  const auto destination = writable_view(frame, plane, env);
+                           const float float_value, IScriptEnvironment* const env, uint32_t cpu_mask) {
+  const auto destination = writable_view(frame, plane, env, cpu_mask);
   switch (video_info.ComponentSize()) {
     case 1:
       fill_blank_u8(destination, static_cast<std::uint8_t>(integer_value));
@@ -241,7 +241,7 @@ void fill_planar_component(PVideoFrame& frame, const int plane, const VideoInfo&
 }
 
 void fill_planar(PVideoFrame& frame, const VideoInfo& video_info, const ColorValues& colors,
-                 IScriptEnvironment* const env) {
+                 IScriptEnvironment* const env, uint32_t cpu_mask) {
   const bool is_yuv = video_info.IsYUV() || video_info.IsYUVA();
   const std::array<int, 4> array_order = is_yuv ? std::array<int, 4>{PLANAR_Y, PLANAR_U, PLANAR_V, PLANAR_A}
                                                 : std::array<int, 4>{PLANAR_R, PLANAR_G, PLANAR_B, PLANAR_A};
@@ -253,18 +253,18 @@ void fill_planar(PVideoFrame& frame, const VideoInfo& video_info, const ColorVal
         colors.is_array ? array_order[static_cast<std::size_t>(index)] : legacy_order[static_cast<std::size_t>(index)];
     if (colors.is_array) {
       fill_planar_component(frame, plane, video_info, colors.integer_components[static_cast<std::size_t>(index)],
-                            colors.float_components[static_cast<std::size_t>(index)], env);
+                            colors.float_components[static_cast<std::size_t>(index)], env, cpu_mask);
       continue;
     }
 
     const int value = legacy_planar_component(video_info, plane, colors);
-    fill_planar_component(frame, plane, video_info, value, legacy_planar_float(plane, value), env);
+    fill_planar_component(frame, plane, video_info, value, legacy_planar_float(plane, value), env, cpu_mask);
   }
 }
 
 void fill_packed(PVideoFrame& frame, const VideoInfo& video_info, const ColorValues& colors,
-                 IScriptEnvironment* const env) {
-  const auto destination = writable_view(frame, DEFAULT_PLANE, env);
+                 IScriptEnvironment* const env, uint32_t cpu_mask) {
+  const auto destination = writable_view(frame, DEFAULT_PLANE, env, cpu_mask);
   const int max_value = max_component_value(video_info);
   const auto component = [&colors](const std::size_t index) {
     return colors.integer_components[index];
@@ -334,6 +334,7 @@ void fill_packed(PVideoFrame& frame, const VideoInfo& video_info, const ColorVal
     return {};
   }
 
+  const uint32_t cpu_mask = allowed_cpu(env);
   PVideoFrame frame = env->NewVideoFrame(video_info);
   AVSMap* const properties = env->getFramePropsRW(frame);
   const bool is_rgb = video_info.IsRGB();
@@ -341,9 +342,9 @@ void fill_packed(PVideoFrame& frame, const VideoInfo& video_info, const ColorVal
   env->propSetInt(properties, "_ColorRange", is_rgb ? kColorRangeFull : kColorRangeLimited, PROPAPPENDMODE_REPLACE);
 
   if (video_info.IsPlanar()) {
-    fill_planar(frame, video_info, colors, env);
+    fill_planar(frame, video_info, colors, env, cpu_mask);
   } else {
-    fill_packed(frame, video_info, colors, env);
+    fill_packed(frame, video_info, colors, env, cpu_mask);
   }
   return frame;
 }

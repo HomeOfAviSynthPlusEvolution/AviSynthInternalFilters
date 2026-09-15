@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 #include <avisynth.h>
+#include "../common/host_cpu.h"
 #include "color_adjust/kernel.h"
 inline constexpr uint32_t color_cpu_flags(uint64_t flags) {
 #if defined(ARM64) || defined(ARM32)
@@ -32,10 +33,10 @@ inline constexpr uint32_t color_cpu_flags(uint64_t flags) {
 #endif
 }
 inline uint32_t color_cpu(IScriptEnvironment* env) {
-  return color_cpu_flags(env->GetCPUFlagsEx());
+  return color_cpu_flags(aif::filters::host_cpu_flags(env));
 }
 inline void map_channel(BYTE* dst, int dp, const BYTE* src, int sp, int w, int h, const void* lut, int bits, int step,
-                        IScriptEnvironment* env) {
-  if (aif_color_adjust_map(dst, dp, src, sp, w, h, lut, bits, step, color_cpu(env)))
+                        IScriptEnvironment* env, uint32_t cpu_mask) {
+  if (aif_color_adjust_map(dst, dp, src, sp, w, h, lut, bits, step, cpu_mask))
     env->ThrowError("color_adjust: lookup failed");
 }

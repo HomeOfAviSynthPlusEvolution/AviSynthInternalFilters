@@ -1,11 +1,14 @@
 #pragma once
 #include <avisynth.h>
+#include <cstdint>
 namespace aif::filters::channel_display {
 class ShowChannel : public GenericVideoFilter
 /**
     * Class to set the RGB components to the alpha mask
   **/
 {
+  const uint32_t cpu_mask_;
+
 public:
   ShowChannel(PClip _child, const char* _pixel_type, int _channel, IScriptEnvironment* env);
   PVideoFrame __stdcall GetFrame(int n, IScriptEnvironment* env) override;

@@ -6,9 +6,9 @@
 namespace aif::filters::rgb_merge {
 MergeRGB::MergeRGB(PClip _child, PClip _blue, PClip _green, PClip _red, PClip _alpha, const char* pixel_type,
                    IScriptEnvironment* env)
-    : GenericVideoFilter(_child), blue(_blue), green(_green), red(_red), alpha(_alpha), viB(blue->GetVideoInfo()),
-      viG(green->GetVideoInfo()), viR(red->GetVideoInfo()), viA(((alpha) ? alpha : child)->GetVideoInfo()),
-      myname((alpha) ? "MergeARGB" : "MergeRGB") {
+    : GenericVideoFilter(_child), cpu_mask_(cpu(env)), blue(_blue), green(_green), red(_red), alpha(_alpha),
+      viB(blue->GetVideoInfo()), viG(green->GetVideoInfo()), viR(red->GetVideoInfo()),
+      viA(((alpha) ? alpha : child)->GetVideoInfo()), myname((alpha) ? "MergeARGB" : "MergeRGB") {
   vi = viR; // comparison base
 
   if ((vi.BitsPerComponent() != viB.BitsPerComponent()) || (vi.BitsPerComponent() != viG.BitsPerComponent()) ||
@@ -143,7 +143,7 @@ PVideoFrame MergeRGB::GetFrame(int n, IScriptEnvironment* env) {
     dp[0] = dst->GetPitch();
   }
   if (aif_rgb_merge_render(src, sp, layout, out, dp, vi.width, vi.height, vi.ComponentSize(),
-                           vi.IsPlanar() ? 1 : vi.NumComponents(), cpu(env)))
+                           vi.IsPlanar() ? 1 : vi.NumComponents(), cpu_mask_))
     env->ThrowError("%s: layout failed", myname);
   return dst;
 }

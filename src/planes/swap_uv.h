@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 #include <avisynth.h>
+#include <cstdint>
 namespace aif::filters::planes {
 class SwapUV : public GenericVideoFilter
 /**
   * SwapUVs planar channels
  **/
 {
+  const uint32_t cpu_mask_;
+
 public:
   SwapUV(PClip _child, IScriptEnvironment* env);
   PVideoFrame __stdcall GetFrame(int n, IScriptEnvironment* env) override;

@@ -16,7 +16,7 @@ AVSValue __cdecl SwapYToUV::CreateYToYUVA(AVSValue args, void*, IScriptEnvironme
 }
 
 SwapYToUV::SwapYToUV(PClip _child, PClip _clip, PClip _clipY, PClip _clipA, IScriptEnvironment* env)
-    : GenericVideoFilter(_child), clip(_clip), clipY(_clipY), clipA(_clipA) {
+    : GenericVideoFilter(_child), cpu_mask_(cpu(env)), clip(_clip), clipY(_clipY), clipA(_clipA) {
   if (!(vi.IsYUVA() || vi.IsY()) && clipA)
     env->ThrowError("YToUV: Only Y or YUVA data accepted when alpha clip is provided"); // Y, YUV and YUY2
   if (!vi.IsYUV() && !vi.IsYUVA()) {
@@ -161,10 +161,10 @@ PVideoFrame __stdcall SwapYToUV::GetFrame(int n, IScriptEnvironment* env) {
       const BYTE* srcp_y = srcy->GetReadPtr();
       const int pitch_y = srcy->GetPitch();
       if (aif_planes_assemble(srcp_y, pitch_y, srcp_u, pitch_u, srcp_v, pitch_v, dstp, dst_pitch, rowsize / 2,
-                              vi.height, cpu(env)))
+                              vi.height, cpu_mask_))
         env->ThrowError("YToUV: invalid YUY2 frame");
     } else if (aif_planes_assemble(nullptr, 0, srcp_u, pitch_u, srcp_v, pitch_v, dstp, dst_pitch, rowsize / 2,
-                                   vi.height, cpu(env)))
+                                   vi.height, cpu_mask_))
       env->ThrowError("YToUV: invalid YUY2 frame");
 
     return dst;
@@ -199,12 +199,12 @@ PVideoFrame __stdcall SwapYToUV::GetFrame(int n, IScriptEnvironment* env) {
   int pitch = dst->GetPitch(PLANAR_Y);
 
   if (vi.ComponentSize() == 1) // 8bit
-    fill_plane<BYTE>(dstp, vi.height, rowsize, pitch, 0x7e, env);
+    fill_plane<BYTE>(dstp, vi.height, rowsize, pitch, 0x7e, env, cpu_mask_);
   else if (vi.ComponentSize() == 2) { // 16bit
     uint16_t luma_val = 0x7e << (vi.BitsPerComponent() - 8);
-    fill_plane<uint16_t>(dstp, vi.height, rowsize, pitch, luma_val, env);
+    fill_plane<uint16_t>(dstp, vi.height, rowsize, pitch, luma_val, env, cpu_mask_);
   } else { // 32bit(float)
-    fill_plane<float>(dstp, vi.height, rowsize, pitch, 126.0f / 256, env);
+    fill_plane<float>(dstp, vi.height, rowsize, pitch, 126.0f / 256, env, cpu_mask_);
   }
 
   return dst;

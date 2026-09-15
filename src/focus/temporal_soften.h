@@ -35,6 +35,7 @@
 #pragma once
 
 #include <avisynth.h>
+#include <cstdint>
 
 namespace aif::filters::focus {
 
@@ -43,6 +44,8 @@ class TemporalSoften : public GenericVideoFilter
  * Class to soften the focus on the temporal axis
  **/
 {
+  const uint32_t cpu_mask_;
+
 public:
   TemporalSoften(PClip _child, unsigned radius, unsigned luma_thresh, unsigned chroma_thresh, int _scenechange,
                  IScriptEnvironment* env);

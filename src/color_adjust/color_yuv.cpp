@@ -85,9 +85,10 @@ ColorYUV::ColorYUV(PClip child, double gain_y, double offset_y, double gamma_y, 
                    bool autogain, bool conditional, int bits, bool showyuv_fullrange,
                    bool tweaklike_params, // ColorYUV2: 0.0/0.5/1.0/2.0/3.0 instead of -256/-128/0/256/512
                    const char* condVarSuffix, bool optForceUseExpr, IScriptEnvironment* env)
-    : GenericVideoFilter(child), colorbar_bits(showyuv ? bits : 0), colorbar_fullrange(showyuv_fullrange),
-      analyse(analyse), autowhite(autowhite), autogain(autogain), conditional(conditional),
-      tweaklike_params(tweaklike_params), condVarSuffix(condVarSuffix), optForceUseExpr(optForceUseExpr) {
+    : GenericVideoFilter(child), cpu_mask_(color_cpu(env)), colorbar_bits(showyuv ? bits : 0),
+      colorbar_fullrange(showyuv_fullrange), analyse(analyse), autowhite(autowhite), autogain(autogain),
+      conditional(conditional), tweaklike_params(tweaklike_params), condVarSuffix(condVarSuffix),
+      optForceUseExpr(optForceUseExpr) {
   luts[0] = luts[1] = luts[2] = nullptr;
 
   if (!vi.IsYUV() && !vi.IsYUVA())
@@ -420,18 +421,18 @@ PVideoFrame __stdcall ColorYUV::GetFrame(int n, IScriptEnvironment* env) {
 
     if (vi.IsYUY2()) {
       coloryuv_apply_lut_yuy2(dst->GetWritePtr(), src->GetReadPtr(), dst->GetPitch(), src->GetPitch(), vi.width,
-                              vi.height, lutY, lutU, lutV, env);
+                              vi.height, lutY, lutU, lutV, env, cpu_mask_);
     } else {
       coloryuv_apply_lut_planar(dst->GetWritePtr(), src->GetReadPtr(), dst->GetPitch(), src->GetPitch(), vi.width,
-                                vi.height, lutY, bits_per_pixel, env);
+                                vi.height, lutY, bits_per_pixel, env, cpu_mask_);
       if (!vi.IsY()) {
         const int width = vi.width >> vi.GetPlaneWidthSubsampling(PLANAR_U);
         const int height = vi.height >> vi.GetPlaneHeightSubsampling(PLANAR_U);
 
         coloryuv_apply_lut_planar(dst->GetWritePtr(PLANAR_U), src->GetReadPtr(PLANAR_U), dst->GetPitch(PLANAR_U),
-                                  src->GetPitch(PLANAR_U), width, height, lutU, bits_per_pixel, env);
+                                  src->GetPitch(PLANAR_U), width, height, lutU, bits_per_pixel, env, cpu_mask_);
         coloryuv_apply_lut_planar(dst->GetWritePtr(PLANAR_V), src->GetReadPtr(PLANAR_V), dst->GetPitch(PLANAR_V),
-                                  src->GetPitch(PLANAR_V), width, height, lutV, bits_per_pixel, env);
+                                  src->GetPitch(PLANAR_V), width, height, lutV, bits_per_pixel, env, cpu_mask_);
       }
       if (vi.IsYUVA()) {
         env->BitBlt(dst->GetWritePtr(PLANAR_A), dst->GetPitch(PLANAR_A), src->GetReadPtr(PLANAR_A),

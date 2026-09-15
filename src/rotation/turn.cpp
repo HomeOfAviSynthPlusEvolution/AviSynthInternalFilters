@@ -43,7 +43,7 @@
 namespace aif::filters::rotation {
 enum { DIRECTION_LEFT, DIRECTION_RIGHT, DIRECTION_180 };
 Turn::Turn(PClip c, int direction, IScriptEnvironment* env)
-    : GenericVideoFilter(c), u_or_b_source(nullptr), v_or_r_source(nullptr) {
+    : GenericVideoFilter(c), cpu_mask_(allowed_cpu(env)), u_or_b_source(nullptr), v_or_r_source(nullptr) {
   if (vi.pixel_type & VideoInfo::CS_INTERLEAVED) {
     num_planes = 1;
   } else if (vi.IsPlanarRGBA() || vi.IsYUVA()) {
@@ -125,7 +125,7 @@ PVideoFrame __stdcall Turn::GetFrame(int n, IScriptEnvironment* env) {
   for (int p = 0; p < num_planes; ++p) {
     const int splane = splanes[p];
     const int dplane = dplanes[p];
-    apply(srcs[p], dst, splane, dplane, bytes, operation, env);
+    apply(srcs[p], dst, splane, dplane, bytes, operation, env, cpu_mask_);
   }
 
   return dst;

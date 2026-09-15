@@ -5,7 +5,7 @@
 #include <string>
 namespace aif::filters::channel_display {
 ShowChannel::ShowChannel(PClip _child, const char* pixel_type, int _channel, IScriptEnvironment* env)
-    : GenericVideoFilter(_child), channel(_channel), input_type(_child->GetVideoInfo().pixel_type),
+    : GenericVideoFilter(_child), cpu_mask_(cpu(env)), channel(_channel), input_type(_child->GetVideoInfo().pixel_type),
       pixelsize(_child->GetVideoInfo().ComponentSize()), bits_per_pixel(_child->GetVideoInfo().BitsPerComponent()) {
   static const char* const ShowText[7] = {"Blue", "Green", "Red", "Alpha", "Y", "U", "V"};
 
@@ -221,22 +221,22 @@ PVideoFrame ShowChannel::GetFrame(int n, IScriptEnvironment* env) {
 
       if (pixelsize == 1) {
         if (!source_hasalpha && !target_hasalpha)
-          packed_to_packedrgb<uint8_t, false, false>(dstp, dstpitch, srcp, pitch, w, height, channel, env);
+          packed_to_packedrgb<uint8_t, false, false>(dstp, dstpitch, srcp, pitch, w, height, channel, env, cpu_mask_);
         else if (!source_hasalpha && target_hasalpha)
-          packed_to_packedrgb<uint8_t, false, true>(dstp, dstpitch, srcp, pitch, w, height, channel, env);
+          packed_to_packedrgb<uint8_t, false, true>(dstp, dstpitch, srcp, pitch, w, height, channel, env, cpu_mask_);
         else if (source_hasalpha && !target_hasalpha)
-          packed_to_packedrgb<uint8_t, true, false>(dstp, dstpitch, srcp, pitch, w, height, channel, env);
+          packed_to_packedrgb<uint8_t, true, false>(dstp, dstpitch, srcp, pitch, w, height, channel, env, cpu_mask_);
         else // if (source_hasalpha && target_hasalpha)
-          packed_to_packedrgb<uint8_t, true, true>(dstp, dstpitch, srcp, pitch, w, height, channel, env);
+          packed_to_packedrgb<uint8_t, true, true>(dstp, dstpitch, srcp, pitch, w, height, channel, env, cpu_mask_);
       } else {
         if (!source_hasalpha && !target_hasalpha)
-          packed_to_packedrgb<uint16_t, false, false>(dstp, dstpitch, srcp, pitch, w, height, channel, env);
+          packed_to_packedrgb<uint16_t, false, false>(dstp, dstpitch, srcp, pitch, w, height, channel, env, cpu_mask_);
         else if (!source_hasalpha && target_hasalpha)
-          packed_to_packedrgb<uint16_t, false, true>(dstp, dstpitch, srcp, pitch, w, height, channel, env);
+          packed_to_packedrgb<uint16_t, false, true>(dstp, dstpitch, srcp, pitch, w, height, channel, env, cpu_mask_);
         else if (source_hasalpha && !target_hasalpha)
-          packed_to_packedrgb<uint16_t, true, false>(dstp, dstpitch, srcp, pitch, w, height, channel, env);
+          packed_to_packedrgb<uint16_t, true, false>(dstp, dstpitch, srcp, pitch, w, height, channel, env, cpu_mask_);
         else // if (source_hasalpha && target_hasalpha)
-          packed_to_packedrgb<uint16_t, true, true>(dstp, dstpitch, srcp, pitch, w, height, channel, env);
+          packed_to_packedrgb<uint16_t, true, true>(dstp, dstpitch, srcp, pitch, w, height, channel, env, cpu_mask_);
       }
     } else if (vi.pixel_type == VideoInfo::CS_YUY2) {
       // packed RGB to YUY2
@@ -244,7 +244,7 @@ PVideoFrame ShowChannel::GetFrame(int n, IScriptEnvironment* env) {
       const int dstpitch = dst->GetPitch();
 
       render(srcp, pitch, nullptr, 0, {dstp, nullptr, nullptr, nullptr}, {dstpitch, 0, 0, 0}, w, height, 1,
-             source_rgb_step, 2, channel, env);
+             source_rgb_step, 2, channel, env, cpu_mask_);
     } else if (vi.IsYUV() || vi.IsYUVA() || vi.IsY()) {
       // packed RGB -> Y, YUV(A)
       BYTE* dstp = dst->GetWritePtr();
@@ -254,23 +254,31 @@ PVideoFrame ShowChannel::GetFrame(int n, IScriptEnvironment* env) {
 
       if (pixelsize == 1) {
         if (!source_hasalpha && !target_hasalpha)
-          packed_to_luma_alpha<uint8_t, false, false>(dstp, dstp_a, dstpitch, srcp, pitch, w, height, channel, env);
+          packed_to_luma_alpha<uint8_t, false, false>(dstp, dstp_a, dstpitch, srcp, pitch, w, height, channel, env,
+                                                      cpu_mask_);
         else if (!source_hasalpha && target_hasalpha)
-          packed_to_luma_alpha<uint8_t, false, true>(dstp, dstp_a, dstpitch, srcp, pitch, w, height, channel, env);
+          packed_to_luma_alpha<uint8_t, false, true>(dstp, dstp_a, dstpitch, srcp, pitch, w, height, channel, env,
+                                                     cpu_mask_);
         else if (source_hasalpha && !target_hasalpha)
-          packed_to_luma_alpha<uint8_t, true, false>(dstp, dstp_a, dstpitch, srcp, pitch, w, height, channel, env);
+          packed_to_luma_alpha<uint8_t, true, false>(dstp, dstp_a, dstpitch, srcp, pitch, w, height, channel, env,
+                                                     cpu_mask_);
         else // if (source_hasalpha && target_hasalpha)
-          packed_to_luma_alpha<uint8_t, true, true>(dstp, dstp_a, dstpitch, srcp, pitch, w, height, channel, env);
+          packed_to_luma_alpha<uint8_t, true, true>(dstp, dstp_a, dstpitch, srcp, pitch, w, height, channel, env,
+                                                    cpu_mask_);
       } else {
         // 16 bit
         if (!source_hasalpha && !target_hasalpha)
-          packed_to_luma_alpha<uint16_t, false, false>(dstp, dstp_a, dstpitch, srcp, pitch, w, height, channel, env);
+          packed_to_luma_alpha<uint16_t, false, false>(dstp, dstp_a, dstpitch, srcp, pitch, w, height, channel, env,
+                                                       cpu_mask_);
         else if (!source_hasalpha && target_hasalpha)
-          packed_to_luma_alpha<uint16_t, false, true>(dstp, dstp_a, dstpitch, srcp, pitch, w, height, channel, env);
+          packed_to_luma_alpha<uint16_t, false, true>(dstp, dstp_a, dstpitch, srcp, pitch, w, height, channel, env,
+                                                      cpu_mask_);
         else if (source_hasalpha && !target_hasalpha)
-          packed_to_luma_alpha<uint16_t, true, false>(dstp, dstp_a, dstpitch, srcp, pitch, w, height, channel, env);
+          packed_to_luma_alpha<uint16_t, true, false>(dstp, dstp_a, dstpitch, srcp, pitch, w, height, channel, env,
+                                                      cpu_mask_);
         else // if (source_hasalpha && target_hasalpha)
-          packed_to_luma_alpha<uint16_t, true, true>(dstp, dstp_a, dstpitch, srcp, pitch, w, height, channel, env);
+          packed_to_luma_alpha<uint16_t, true, true>(dstp, dstp_a, dstpitch, srcp, pitch, w, height, channel, env,
+                                                     cpu_mask_);
       }
 
       // fill chroma neutral
@@ -282,13 +290,14 @@ PVideoFrame ShowChannel::GetFrame(int n, IScriptEnvironment* env) {
         BYTE* dstp_v = dst->GetWritePtr(PLANAR_V);
         switch (pixelsize) {
           case 1:
-            fill_chroma<BYTE>(dstp_u, dstp_v, dstheight, uvrowsize, uvpitch, (BYTE)0x80, env);
+            fill_chroma<BYTE>(dstp_u, dstp_v, dstheight, uvrowsize, uvpitch, (BYTE)0x80, env, cpu_mask_);
             break;
           case 2:
-            fill_chroma<uint16_t>(dstp_u, dstp_v, dstheight, uvrowsize, uvpitch, 1 << (vi.BitsPerComponent() - 1), env);
+            fill_chroma<uint16_t>(dstp_u, dstp_v, dstheight, uvrowsize, uvpitch, 1 << (vi.BitsPerComponent() - 1), env,
+                                  cpu_mask_);
             break;
           case 4:
-            fill_chroma<float>(dstp_u, dstp_v, dstheight, uvrowsize, uvpitch, chroma_center_f, env);
+            fill_chroma<float>(dstp_u, dstp_v, dstheight, uvrowsize, uvpitch, chroma_center_f, env, cpu_mask_);
             break;
         }
       }
@@ -303,30 +312,30 @@ PVideoFrame ShowChannel::GetFrame(int n, IScriptEnvironment* env) {
       if (pixelsize == 1) {
         if (!source_hasalpha && !target_hasalpha)
           packed_to_planarrgb<uint8_t, false, false>(dstp_r, dstp_g, dstp_b, dstp_a, dstpitch, srcp, pitch, w, height,
-                                                     channel, env);
+                                                     channel, env, cpu_mask_);
         else if (!source_hasalpha && target_hasalpha)
           packed_to_planarrgb<uint8_t, false, true>(dstp_r, dstp_g, dstp_b, dstp_a, dstpitch, srcp, pitch, w, height,
-                                                    channel, env);
+                                                    channel, env, cpu_mask_);
         else if (source_hasalpha && !target_hasalpha)
           packed_to_planarrgb<uint8_t, true, false>(dstp_r, dstp_g, dstp_b, dstp_a, dstpitch, srcp, pitch, w, height,
-                                                    channel, env);
+                                                    channel, env, cpu_mask_);
         else // if (source_hasalpha && target_hasalpha)
           packed_to_planarrgb<uint8_t, true, true>(dstp_r, dstp_g, dstp_b, dstp_a, dstpitch, srcp, pitch, w, height,
-                                                   channel, env);
+                                                   channel, env, cpu_mask_);
       } else {
         // 16 bit
         if (!source_hasalpha && !target_hasalpha)
           packed_to_planarrgb<uint16_t, false, false>(dstp_r, dstp_g, dstp_b, dstp_a, dstpitch, srcp, pitch, w, height,
-                                                      channel, env);
+                                                      channel, env, cpu_mask_);
         else if (!source_hasalpha && target_hasalpha)
           packed_to_planarrgb<uint16_t, false, true>(dstp_r, dstp_g, dstp_b, dstp_a, dstpitch, srcp, pitch, w, height,
-                                                     channel, env);
+                                                     channel, env, cpu_mask_);
         else if (source_hasalpha && !target_hasalpha)
           packed_to_planarrgb<uint16_t, true, false>(dstp_r, dstp_g, dstp_b, dstp_a, dstpitch, srcp, pitch, w, height,
-                                                     channel, env);
+                                                     channel, env, cpu_mask_);
         else // if (source_hasalpha && target_hasalpha)
           packed_to_planarrgb<uint16_t, true, true>(dstp_r, dstp_g, dstp_b, dstp_a, dstpitch, srcp, pitch, w, height,
-                                                    channel, env);
+                                                    channel, env, cpu_mask_);
       }
     }
     return dst;
@@ -372,21 +381,27 @@ PVideoFrame ShowChannel::GetFrame(int n, IScriptEnvironment* env) {
       if (bits_per_pixel == 8) {
         if (target_hasalpha) {
           if (source_hasalpha)
-            planar_to_packedrgb<uint8_t, true, true>(dstp, dstpitch, srcp, srcp_a, pitch, width, height, env);
+            planar_to_packedrgb<uint8_t, true, true>(dstp, dstpitch, srcp, srcp_a, pitch, width, height, env,
+                                                     cpu_mask_);
           else
-            planar_to_packedrgb<uint8_t, false, true>(dstp, dstpitch, srcp, srcp_a, pitch, width, height, env);
+            planar_to_packedrgb<uint8_t, false, true>(dstp, dstpitch, srcp, srcp_a, pitch, width, height, env,
+                                                      cpu_mask_);
         } else {
-          planar_to_packedrgb<uint8_t, false, false>(dstp, dstpitch, srcp, srcp_a, pitch, width, height, env);
+          planar_to_packedrgb<uint8_t, false, false>(dstp, dstpitch, srcp, srcp_a, pitch, width, height, env,
+                                                     cpu_mask_);
         }
       } else {
         // 16 bits
         if (target_hasalpha) {
           if (source_hasalpha)
-            planar_to_packedrgb<uint16_t, true, true>(dstp, dstpitch, srcp, srcp_a, pitch, width, height, env);
+            planar_to_packedrgb<uint16_t, true, true>(dstp, dstpitch, srcp, srcp_a, pitch, width, height, env,
+                                                      cpu_mask_);
           else
-            planar_to_packedrgb<uint16_t, false, true>(dstp, dstpitch, srcp, srcp_a, pitch, width, height, env);
+            planar_to_packedrgb<uint16_t, false, true>(dstp, dstpitch, srcp, srcp_a, pitch, width, height, env,
+                                                       cpu_mask_);
         } else {
-          planar_to_packedrgb<uint16_t, false, false>(dstp, dstpitch, srcp, srcp_a, pitch, width, height, env);
+          planar_to_packedrgb<uint16_t, false, false>(dstp, dstpitch, srcp, srcp_a, pitch, width, height, env,
+                                                      cpu_mask_);
         }
       }
 
@@ -402,7 +417,7 @@ PVideoFrame ShowChannel::GetFrame(int n, IScriptEnvironment* env) {
       env->propDeleteKey(props, "_ChromaLocation");
 
       render(srcp, pitch, nullptr, 0, {dstp, nullptr, nullptr, nullptr}, {dstpitch, 0, 0, 0}, width, height, 1, 1, 2, 0,
-             env);
+             env, cpu_mask_);
       return dst;
     } else { // planar to planar
       // RGB(A)P/YUVA -> YV12/16/24/Y8 + 16bit
@@ -433,14 +448,14 @@ PVideoFrame ShowChannel::GetFrame(int n, IScriptEnvironment* env) {
           BYTE* dstp_v = dst->GetWritePtr(PLANAR_V);
           switch (pixelsize) {
             case 1:
-              fill_chroma<uint8_t>(dstp_u, dstp_v, dstheight, uvrowsize, uvpitch, (uint8_t)0x80, env);
+              fill_chroma<uint8_t>(dstp_u, dstp_v, dstheight, uvrowsize, uvpitch, (uint8_t)0x80, env, cpu_mask_);
               break;
             case 2:
               fill_chroma<uint16_t>(dstp_u, dstp_v, dstheight, uvrowsize, uvpitch, 1 << (vi.BitsPerComponent() - 1),
-                                    env);
+                                    env, cpu_mask_);
               break;
             case 4:
-              fill_chroma<float>(dstp_u, dstp_v, dstheight, uvrowsize, uvpitch, chroma_center_f, env);
+              fill_chroma<float>(dstp_u, dstp_v, dstheight, uvrowsize, uvpitch, chroma_center_f, env, cpu_mask_);
               break;
           }
         }
@@ -500,13 +515,14 @@ PVideoFrame ShowChannel::GetFrame(int n, IScriptEnvironment* env) {
         } else {
           switch (vi.ComponentSize()) {
             case 1:
-              fill_plane<uint8_t>(dstp_a, heightA, dst_rowsizeA, dst_pitchA, 0xFF, env);
+              fill_plane<uint8_t>(dstp_a, heightA, dst_rowsizeA, dst_pitchA, 0xFF, env, cpu_mask_);
               break;
             case 2:
-              fill_plane<uint16_t>(dstp_a, heightA, dst_rowsizeA, dst_pitchA, (1 << vi.BitsPerComponent()) - 1, env);
+              fill_plane<uint16_t>(dstp_a, heightA, dst_rowsizeA, dst_pitchA, (1 << vi.BitsPerComponent()) - 1, env,
+                                   cpu_mask_);
               break;
             case 4:
-              fill_plane<float>(dstp_a, heightA, dst_rowsizeA, dst_pitchA, 1.0f, env);
+              fill_plane<float>(dstp_a, heightA, dst_rowsizeA, dst_pitchA, 1.0f, env, cpu_mask_);
               break;
           }
         }

@@ -11,6 +11,7 @@ const AVS_Linkage* AVS_linkage = nullptr;
 
 AIF_PLUGIN_EXPORT const char* __stdcall AvisynthPluginInit3(IScriptEnvironment* environment,
                                                             const AVS_Linkage* const linkage) {
+  environment->CheckVersion(8); // Frame properties, allocation and alpha subframes.
   AVS_linkage = linkage;
   aif::filters::channel_display::register_filters(environment);
   return "AviSynthInternalFilters: ChannelDisplay migration baseline";

@@ -38,8 +38,8 @@
 #include "kernel/levels.h"
 Levels::Levels(PClip _child, float _in_min, double _gamma, float _in_max, float _out_min, float _out_max, bool _coring,
                bool _dither, IScriptEnvironment* env)
-    : GenericVideoFilter(_child), coring(_coring), dither(_dither), gamma(_gamma), in_min_f(_in_min), in_max_f(_in_max),
-      out_min_f(_out_min), out_max_f(_out_max) {
+    : GenericVideoFilter(_child), cpu_mask_(color_cpu(env)), coring(_coring), dither(_dither), gamma(_gamma),
+      in_min_f(_in_min), in_max_f(_in_max), out_min_f(_out_min), out_max_f(_out_max) {
   if (gamma <= 0.0)
     env->ThrowError("Levels: gamma must be positive");
 
@@ -190,13 +190,14 @@ PVideoFrame __stdcall Levels::GetFrame(int n, IScriptEnvironment* env) {
         auto* data = frame->GetWritePtr(plane);
         int stride = frame->GetPitch(plane);
         map_channel(data, stride, data, stride, frame->GetRowSize(plane) / pixelsize, frame->GetHeight(plane),
-                    (!isrgb && i) ? mapchroma : map, pixelsize == 1 ? 8 : 16, 1, env);
+                    (!isrgb && i) ? mapchroma : map, pixelsize == 1 ? 8 : 16, 1, env, cpu_mask_);
       }
     } else if (vi.IsYUY2()) {
-      map_channel(p, pitch, p, pitch, vi.width, vi.height, map, 8, 2, env);
-      map_channel(p + 1, pitch, p + 1, pitch, vi.width, vi.height, mapchroma, 8, 2, env);
+      map_channel(p, pitch, p, pitch, vi.width, vi.height, map, 8, 2, env, cpu_mask_);
+      map_channel(p + 1, pitch, p + 1, pitch, vi.width, vi.height, mapchroma, 8, 2, env, cpu_mask_);
     } else
-      map_channel(p, pitch, p, pitch, frame->GetRowSize() / pixelsize, vi.height, map, pixelsize == 1 ? 8 : 16, 1, env);
+      map_channel(p, pitch, p, pitch, frame->GetRowSize() / pixelsize, vi.height, map, pixelsize == 1 ? 8 : 16, 1, env,
+                  cpu_mask_);
     return frame;
   }
   if (use_lut) {

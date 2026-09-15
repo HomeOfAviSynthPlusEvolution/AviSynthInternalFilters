@@ -1,5 +1,6 @@
 #pragma once
 #include <avisynth.h>
+#include "../common/host_cpu.h"
 #include "rows_columns/kernel.h"
 #include <vector>
 #include <algorithm>
@@ -34,10 +35,10 @@ inline constexpr uint32_t allowed_cpu_flags(uint64_t flags) {
 #endif
 }
 inline void column_frame(const std::vector<PVideoFrame>& frames, PVideoFrame& dst, const VideoInfo& vi, int period,
-                         int phase, bool weave, IScriptEnvironment* env) {
+                         int phase, bool weave, IScriptEnvironment* env, uint32_t cpu_mask) {
   const int yuv[] = {PLANAR_Y, PLANAR_U, PLANAR_V, PLANAR_A}, rgb[] = {PLANAR_G, PLANAR_B, PLANAR_R, PLANAR_A};
   const int* planes = vi.IsRGB() ? rgb : yuv;
-  const uint32_t cpu = allowed_cpu_flags(env->GetCPUFlagsEx());
+  const uint32_t cpu = cpu_mask;
   for (int p = 0; p < (vi.IsPlanar() ? vi.NumComponents() : 1); ++p) {
     int plane = vi.IsPlanar() ? planes[p] : 0;
     int size = vi.IsPlanar() ? vi.ComponentSize() : vi.IsYUY2() ? 0 : vi.ComponentSize() * vi.NumComponents();

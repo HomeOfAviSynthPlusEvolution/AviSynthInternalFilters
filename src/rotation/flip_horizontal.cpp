@@ -46,10 +46,10 @@ PVideoFrame __stdcall FlipHorizontal::GetFrame(int n, IScriptEnvironment* env) {
   auto d = env->NewVideoFrameP(vi, &s);
   const int planes[] = {0, vi.IsRGB() ? PLANAR_B : PLANAR_U, vi.IsRGB() ? PLANAR_R : PLANAR_V, PLANAR_A};
   for (int i = 0; i < (vi.IsPlanar() ? vi.NumComponents() : 1); ++i)
-    apply(s, d, planes[i], planes[i], pixel_bytes(vi), 3, env);
+    apply(s, d, planes[i], planes[i], pixel_bytes(vi), 3, env, cpu_mask_);
   return d;
 }
-AVSValue __cdecl FlipHorizontal::Create(AVSValue args, void*, IScriptEnvironment*) {
-  return new FlipHorizontal(args[0].AsClip());
+AVSValue __cdecl FlipHorizontal::Create(AVSValue args, void*, IScriptEnvironment* env) {
+  return new FlipHorizontal(args[0].AsClip(), env);
 }
 } // namespace aif::filters::rotation

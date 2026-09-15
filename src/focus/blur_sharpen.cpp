@@ -49,13 +49,13 @@ AVSValue __cdecl Create_Sharpen(AVSValue args, void*, IScriptEnvironment* env) {
     if (fabs(amountV) < 0.00002201361136) {
       return args[0].AsClip();
     } else {
-      return new AdjustFocusV(amountV, args[0].AsClip());
+      return new AdjustFocusV(amountV, args[0].AsClip(), env);
     }
   } else {
     if (fabs(amountV) < 0.00002201361136) {
-      return new AdjustFocusH(amountH, args[0].AsClip());
+      return new AdjustFocusH(amountH, args[0].AsClip(), env);
     } else {
-      return new AdjustFocusH(amountH, new AdjustFocusV(amountV, args[0].AsClip()));
+      return new AdjustFocusH(amountH, new AdjustFocusV(amountV, args[0].AsClip(), env), env);
     }
   }
 }
@@ -71,13 +71,13 @@ AVSValue __cdecl Create_Blur(AVSValue args, void*, IScriptEnvironment* env) {
     if (fabs(amountV) < 0.00002201361136) {
       return args[0].AsClip();
     } else {
-      return new AdjustFocusV(-amountV, args[0].AsClip());
+      return new AdjustFocusV(-amountV, args[0].AsClip(), env);
     }
   } else {
     if (fabs(amountV) < 0.00002201361136) {
-      return new AdjustFocusH(-amountH, args[0].AsClip());
+      return new AdjustFocusH(-amountH, args[0].AsClip(), env);
     } else {
-      return new AdjustFocusH(-amountH, new AdjustFocusV(-amountV, args[0].AsClip()));
+      return new AdjustFocusH(-amountH, new AdjustFocusV(-amountV, args[0].AsClip(), env), env);
     }
   }
 }

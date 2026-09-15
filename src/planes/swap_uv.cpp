@@ -10,7 +10,7 @@ AVSValue __cdecl SwapUV::CreateSwapUV(AVSValue args, void*, IScriptEnvironment* 
   return new SwapUV(p, env);
 }
 
-SwapUV::SwapUV(PClip _child, IScriptEnvironment* env) : GenericVideoFilter(_child) {
+SwapUV::SwapUV(PClip _child, IScriptEnvironment* env) : GenericVideoFilter(_child), cpu_mask_(cpu(env)) {
   if (!vi.IsYUV() && !vi.IsYUVA())
     env->ThrowError("SwapUV: YUV or YUVA data only!");
 }
@@ -39,7 +39,7 @@ PVideoFrame __stdcall SwapUV::GetFrame(int n, IScriptEnvironment* env) {
   int dst_pitch = dst->GetPitch();
   int rowsize = src->GetRowSize();
   {
-    if (aif_planes_swap(srcp, src_pitch, dstp, dst_pitch, rowsize / 2, vi.height, cpu(env)))
+    if (aif_planes_swap(srcp, src_pitch, dstp, dst_pitch, rowsize / 2, vi.height, cpu_mask_))
       env->ThrowError("SwapUV: invalid YUY2 frame");
   }
   return dst;

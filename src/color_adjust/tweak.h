@@ -34,8 +34,11 @@
 
 #pragma once
 #include <avisynth.h>
+#include <cstdint>
 #include "kernel/types.h"
 class Tweak : public GenericVideoFilter {
+  const uint32_t cpu_mask_;
+
 public:
   Tweak(PClip _child, double _hue, double _sat, double _bright, double _cont, bool _coring, double _startHue,
         double _endHue, double _maxSat, double _minSat, double _interp, bool _dither, bool _realcalc,

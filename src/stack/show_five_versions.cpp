@@ -37,7 +37,7 @@
 #include <cstring>
 #include "kernel_adapter.h"
 namespace aif::filters::stack {
-ShowFiveVersions::ShowFiveVersions(PClip* children, IScriptEnvironment* env) {
+ShowFiveVersions::ShowFiveVersions(PClip* children, IScriptEnvironment* env) : cpu_mask_(allowed_cpu(env)) {
   for (int b = 0; b < 5; ++b)
     child[b] = children[b];
 
@@ -59,7 +59,7 @@ PVideoFrame __stdcall ShowFiveVersions::GetFrame(int n, IScriptEnvironment* env)
   const int yuv[] = {PLANAR_Y, PLANAR_U, PLANAR_V, PLANAR_A}, rgb[] = {PLANAR_G, PLANAR_B, PLANAR_R, PLANAR_A};
   const int* planes = vi.IsRGB() ? rgb : yuv;
   int count = vi.IsPlanar() ? vi.NumComponents() : 1;
-  const uint32_t cpu = allowed_cpu(env);
+  const uint32_t cpu = cpu_mask_;
   for (int p = 0; p < count; ++p) {
     int plane = vi.IsPlanar() ? planes[p] : 0;
     uint32_t pattern = 128;

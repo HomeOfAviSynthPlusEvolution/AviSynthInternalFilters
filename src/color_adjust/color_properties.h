@@ -33,6 +33,7 @@
 // import and export plugins, or graphical user interfaces.
 
 #pragma once
+#include "../common/host_properties.h"
 #include <cctype>
 namespace {
 
@@ -110,10 +111,10 @@ void read_color_yuv_properties(const AVSMap* const properties, int& matrix, int&
     return;
   }
   if (env->propNumElements(properties, "_Matrix") > 0) {
-    matrix = static_cast<int>(env->propGetIntSaturated(properties, "_Matrix", 0, nullptr));
+    matrix = static_cast<int>(aif::filters::property_int(env, properties, "_Matrix", 0, nullptr));
   }
   if (env->propNumElements(properties, "_ColorRange") > 0) {
-    color_range = static_cast<int>(env->propGetIntSaturated(properties, "_ColorRange", 0, nullptr));
+    color_range = static_cast<int>(aif::filters::property_int(env, properties, "_ColorRange", 0, nullptr));
   }
 }
 

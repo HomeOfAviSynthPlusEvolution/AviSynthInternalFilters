@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 #include <avisynth.h>
+#include "../common/host_cpu.h"
 #include <array>
 #include <algorithm>
 #include "blank_clip/kernel.h"
@@ -35,7 +36,7 @@ inline constexpr uint32_t allowed_cpu_flags(uint64_t flags) {
 #endif
 }
 inline uint32_t allowed_cpu(IScriptEnvironment* env) {
-  return allowed_cpu_flags(env->GetCPUFlagsEx());
+  return allowed_cpu_flags(aif::filters::host_cpu_flags(env));
 }
 inline std::uint32_t rgb_to_yuv_rec601(const std::uint32_t rgb) noexcept {
   constexpr int cyb = static_cast<int>(0.114 * 219 / 255 * 65536 + 0.5);
@@ -59,11 +60,12 @@ struct FillTarget {
   PVideoFrame& frame;
   int plane;
   IScriptEnvironment* env;
+  uint32_t cpu_mask;
 };
 template <class T, size_t N>
 void fill_pattern(FillTarget d, const std::array<T, N>& pattern) {
   if (aif_blank_clip_fill(d.frame->GetWritePtr(d.plane), d.frame->GetPitch(d.plane), d.frame->GetRowSize(d.plane),
-                          d.frame->GetHeight(d.plane), pattern.data(), sizeof(T) * N, allowed_cpu(d.env)))
+                          d.frame->GetHeight(d.plane), pattern.data(), sizeof(T) * N, d.cpu_mask))
     d.env->ThrowError("BlankClip: invalid fill geometry");
 }
 inline void fill_blank_u8(FillTarget d, uint8_t v) {

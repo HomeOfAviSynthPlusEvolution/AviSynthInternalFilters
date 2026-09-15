@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 #include <avisynth.h>
+#include "../common/host_cpu.h"
 #include "planes/kernel.h"
 #include <algorithm>
 #include <cstring>
@@ -44,7 +45,7 @@ inline constexpr uint32_t allowed_cpu_flags(uint64_t flags) {
 #endif
 }
 inline uint32_t cpu(IScriptEnvironment* env) {
-  return allowed_cpu_flags(env->GetCPUFlagsEx());
+  return allowed_cpu_flags(aif::filters::host_cpu_flags(env));
 }
 inline PClip convert(PClip clip, const char* name, IScriptEnvironment* env) {
   return env->Invoke(name, clip).AsClip();
@@ -55,14 +56,15 @@ inline int pixel_type(const char* name, IScriptEnvironment* env) {
   return env->Invoke("BlankClip", AVSValue(args, 4), names).AsClip()->GetVideoInfo().pixel_type;
 }
 template <class T>
-void fill_plane(uint8_t* p, int h, int row, int pitch, T value, IScriptEnvironment* env) {
-  if (aif_planes_fill(p, pitch, row, h, &value, sizeof(T), cpu(env)))
+void fill_plane(uint8_t* p, int h, int row, int pitch, T value, IScriptEnvironment* env, uint32_t cpu_mask) {
+  if (aif_planes_fill(p, pitch, row, h, &value, sizeof(T), cpu_mask))
     env->ThrowError("Planes: invalid fill");
 }
 template <class T>
-void fill_chroma(uint8_t* u, uint8_t* v, int h, int row, int pitch, T value, IScriptEnvironment* env) {
-  fill_plane(u, h, row, pitch, value, env);
-  fill_plane(v, h, row, pitch, value, env);
+void fill_chroma(uint8_t* u, uint8_t* v, int h, int row, int pitch, T value, IScriptEnvironment* env,
+                 uint32_t cpu_mask) {
+  fill_plane(u, h, row, pitch, value, env, cpu_mask);
+  fill_plane(v, h, row, pitch, value, env, cpu_mask);
 }
 inline float uv8tof(int value) {
   return (value - 128) / 255.0f;

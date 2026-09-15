@@ -34,6 +34,7 @@
 
 #pragma once
 #include <avisynth.h>
+#include <cstdint>
 #include "kernel/types.h"
 struct RGBAdjustPlaneConfig {
   double scale;
@@ -60,6 +61,8 @@ class RGBAdjust : public GenericVideoFilter
   * Class for adjusting and analyzing colors in RGBA space
  **/
 {
+  const uint32_t cpu_mask_;
+
 public:
   RGBAdjust(PClip _child, double r, double g, double b, double a, double rb, double gb, double bb, double ab, double rg,
             double gg, double bg, double ag, bool _analyze, bool _dither, bool _conditional, const char* _condVarSuffix,

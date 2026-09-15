@@ -134,8 +134,8 @@ void RGBAdjust::rgbadjust_create_lut(BYTE* lut_buf, const int plane, RGBAdjustCo
 RGBAdjust::RGBAdjust(PClip _child, double r, double g, double b, double a, double rb, double gb, double bb, double ab,
                      double rg, double gg, double bg, double ag, bool _analyze, bool _dither, bool _conditional,
                      const char* _condVarSuffix, IScriptEnvironment* env)
-    : GenericVideoFilter(_child), analyze(_analyze), dither(_dither), conditional(_conditional),
-      condVarSuffix(_condVarSuffix) {
+    : GenericVideoFilter(_child), cpu_mask_(color_cpu(env)), analyze(_analyze), dither(_dither),
+      conditional(_conditional), condVarSuffix(_condVarSuffix) {
   // one buffer for all maps
   map_holder = nullptr;
 
@@ -258,16 +258,16 @@ PVideoFrame __stdcall RGBAdjust::GetFrame(int n, IScriptEnvironment* env) {
   if (dither) {
     if (vi.IsRGB32())
       apply_map_rgb_packed_c<uint8_t, 4, true>(p, pitch, maps_live[0], maps_live[1], maps_live[2], maps_live[3], w, h,
-                                               bits_per_pixel, env);
+                                               bits_per_pixel, env, cpu_mask_);
     else if (vi.IsRGB24())
       apply_map_rgb_packed_c<uint8_t, 3, true>(p, pitch, maps_live[0], maps_live[1], maps_live[2], maps_live[3], w, h,
-                                               bits_per_pixel, env);
+                                               bits_per_pixel, env, cpu_mask_);
     else if (vi.IsRGB64())
       apply_map_rgb_packed_c<uint16_t, 4, true>(p, pitch, maps_live[0], maps_live[1], maps_live[2], maps_live[3], w, h,
-                                                bits_per_pixel, env);
+                                                bits_per_pixel, env, cpu_mask_);
     else if (vi.IsRGB48())
       apply_map_rgb_packed_c<uint16_t, 3, true>(p, pitch, maps_live[0], maps_live[1], maps_live[2], maps_live[3], w, h,
-                                                bits_per_pixel, env);
+                                                bits_per_pixel, env, cpu_mask_);
     else {
       // Planar RGB
       bool hasAlpha = vi.IsPlanarRGBA();
@@ -279,33 +279,36 @@ PVideoFrame __stdcall RGBAdjust::GetFrame(int n, IScriptEnvironment* env) {
       if (pixelsize == 1) {
         if (hasAlpha)
           apply_map_rgb_planar_c<uint8_t, true, true>(p_r, p_g, p_b, p_a, pitch, maps_live[0], maps_live[1],
-                                                      maps_live[2], maps_live[3], w, h, bits_per_pixel, env);
+                                                      maps_live[2], maps_live[3], w, h, bits_per_pixel, env, cpu_mask_);
         else
           apply_map_rgb_planar_c<uint8_t, false, true>(p_r, p_g, p_b, p_a, pitch, maps_live[0], maps_live[1],
-                                                       maps_live[2], maps_live[3], w, h, bits_per_pixel, env);
+                                                       maps_live[2], maps_live[3], w, h, bits_per_pixel, env,
+                                                       cpu_mask_);
       } else {
         if (hasAlpha)
           apply_map_rgb_planar_c<uint16_t, true, true>(p_r, p_g, p_b, p_a, pitch, maps_live[0], maps_live[1],
-                                                       maps_live[2], maps_live[3], w, h, bits_per_pixel, env);
+                                                       maps_live[2], maps_live[3], w, h, bits_per_pixel, env,
+                                                       cpu_mask_);
         else
           apply_map_rgb_planar_c<uint16_t, false, true>(p_r, p_g, p_b, p_a, pitch, maps_live[0], maps_live[1],
-                                                        maps_live[2], maps_live[3], w, h, bits_per_pixel, env);
+                                                        maps_live[2], maps_live[3], w, h, bits_per_pixel, env,
+                                                        cpu_mask_);
       }
     }
   } else {
     // no dither
     if (vi.IsRGB32())
       apply_map_rgb_packed_c<uint8_t, 4, false>(p, pitch, maps_live[0], maps_live[1], maps_live[2], maps_live[3], w, h,
-                                                bits_per_pixel, env);
+                                                bits_per_pixel, env, cpu_mask_);
     else if (vi.IsRGB24())
       apply_map_rgb_packed_c<uint8_t, 3, false>(p, pitch, maps_live[0], maps_live[1], maps_live[2], maps_live[3], w, h,
-                                                bits_per_pixel, env);
+                                                bits_per_pixel, env, cpu_mask_);
     else if (vi.IsRGB64())
       apply_map_rgb_packed_c<uint16_t, 4, false>(p, pitch, maps_live[0], maps_live[1], maps_live[2], maps_live[3], w, h,
-                                                 bits_per_pixel, env);
+                                                 bits_per_pixel, env, cpu_mask_);
     else if (vi.IsRGB48())
       apply_map_rgb_packed_c<uint16_t, 3, false>(p, pitch, maps_live[0], maps_live[1], maps_live[2], maps_live[3], w, h,
-                                                 bits_per_pixel, env);
+                                                 bits_per_pixel, env, cpu_mask_);
     else {
       // Planar RGB
       bool hasAlpha = vi.IsPlanarRGBA();
@@ -317,17 +320,21 @@ PVideoFrame __stdcall RGBAdjust::GetFrame(int n, IScriptEnvironment* env) {
       if (pixelsize == 1) {
         if (hasAlpha)
           apply_map_rgb_planar_c<uint8_t, true, false>(p_r, p_g, p_b, p_a, pitch, maps_live[0], maps_live[1],
-                                                       maps_live[2], maps_live[3], w, h, bits_per_pixel, env);
+                                                       maps_live[2], maps_live[3], w, h, bits_per_pixel, env,
+                                                       cpu_mask_);
         else
           apply_map_rgb_planar_c<uint8_t, false, false>(p_r, p_g, p_b, p_a, pitch, maps_live[0], maps_live[1],
-                                                        maps_live[2], maps_live[3], w, h, bits_per_pixel, env);
+                                                        maps_live[2], maps_live[3], w, h, bits_per_pixel, env,
+                                                        cpu_mask_);
       } else if (pixelsize == 2) {
         if (hasAlpha)
           apply_map_rgb_planar_c<uint16_t, true, false>(p_r, p_g, p_b, p_a, pitch, maps_live[0], maps_live[1],
-                                                        maps_live[2], maps_live[3], w, h, bits_per_pixel, env);
+                                                        maps_live[2], maps_live[3], w, h, bits_per_pixel, env,
+                                                        cpu_mask_);
         else
           apply_map_rgb_planar_c<uint16_t, false, false>(p_r, p_g, p_b, p_a, pitch, maps_live[0], maps_live[1],
-                                                         maps_live[2], maps_live[3], w, h, bits_per_pixel, env);
+                                                         maps_live[2], maps_live[3], w, h, bits_per_pixel, env,
+                                                         cpu_mask_);
       } else {
         // 32 bit float, no dither
         const int planesRGB_RgbaOrder[4] = {PLANAR_R, PLANAR_G, PLANAR_B, PLANAR_A};

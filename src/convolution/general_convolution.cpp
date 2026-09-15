@@ -43,8 +43,8 @@
 #include <iterator>
 GeneralConvolution::GeneralConvolution(PClip _child, double _divisor, float _nBias, const char* _matrix,
                                        bool _autoscale, bool _luma, bool _chroma, bool _alpha, IScriptEnvironment* _env)
-    : GenericVideoFilter(_child), divisor(_divisor), nBias(0), fBias(_nBias), autoscale(_autoscale), luma(_luma),
-      chroma(_chroma), alpha(_alpha) {
+    : GenericVideoFilter(_child), cpu_mask_(aif::filters::convolution::allowed_cpu(_env)), divisor(_divisor), nBias(0),
+      fBias(_nBias), autoscale(_autoscale), luma(_luma), chroma(_chroma), alpha(_alpha) {
   if (!std::isfinite(_divisor) || !std::isfinite(_nBias))
     _env->ThrowError("GeneralConvolution: divisor and bias must be finite");
 
@@ -237,7 +237,7 @@ PVideoFrame __stdcall GeneralConvolution::GetFrame(int n, IScriptEnvironment* en
     }
 
     int dim = nSize == 9 ? 3 : nSize == 25 ? 5 : nSize == 49 ? 7 : 9;
-    const uint32_t cpu = aif::filters::convolution::allowed_cpu(env);
+    const uint32_t cpu = cpu_mask_;
     if (aif_convolution_apply(dst->GetWritePtr(plane), dst->GetPitch(plane), src->GetReadPtr(plane),
                               src->GetPitch(plane), width, height,
                               vi.BitsPerComponent() <= 16 ? static_cast<const void*>(matrix) : matrixf, dim,
