@@ -41,6 +41,8 @@
 #include <regex>
 #include <string>
 #include <iterator>
+
+namespace aif::filters::convolution {
 GeneralConvolution::GeneralConvolution(PClip _child, double _divisor, float _nBias, const char* _matrix,
                                        bool _autoscale, bool _luma, bool _chroma, bool _alpha, IScriptEnvironment* _env)
     : GenericVideoFilter(_child), cpu_mask_(aif::filters::convolution::allowed_cpu(_env)), divisor(_divisor), nBias(0),
@@ -248,3 +250,5 @@ PVideoFrame __stdcall GeneralConvolution::GetFrame(int n, IScriptEnvironment* en
   return dst;
   // really, not other case left... packed RGB was converted to planar RGB, YUY2 to YV16
 }
+
+} // namespace aif::filters::convolution

@@ -36,6 +36,8 @@
 #include <avisynth.h>
 #include <cstdint>
 #include "kernel/types.h"
+
+namespace aif::filters::color_adjust {
 struct RGBAdjustPlaneConfig {
   double scale;
   double bias;
@@ -101,3 +103,5 @@ private:
   void CheckAndConvertParams(RGBAdjustConfig& config, IScriptEnvironment* env);
   void rgbadjust_create_lut(BYTE* lut_buf, const int plane, RGBAdjustConfig& config);
 };
+
+} // namespace aif::filters::color_adjust

@@ -46,6 +46,8 @@
 #include "color_properties.h"
 #include "kernel/range.h"
 #include "kernel_adapter.h"
+
+namespace aif::filters::color_adjust {
 #include "kernel/color_yuv.h"
 #define READ_CONDITIONAL(plane, var_name, internal_name, condVarSuffix)                                                \
   {                                                                                                                    \
@@ -512,3 +514,5 @@ AVSValue __cdecl ColorYUV::Create(AVSValue args, void*, IScriptEnvironment* env)
                       args[25].AsBool(false), // optForceUseExpr debug parameter
                       env);
 }
+
+} // namespace aif::filters::color_adjust

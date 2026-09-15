@@ -35,6 +35,8 @@
 #pragma once
 #include <avisynth.h>
 #include <cstdint>
+
+namespace aif::filters::color_adjust {
 enum { COLORYUV_RANGE_NONE, COLORYUV_RANGE_TV_PC, COLORYUV_RANGE_PC_TV, COLORYUV_RANGE_PC_TVY };
 
 struct ColorYUVPlaneData {
@@ -88,3 +90,5 @@ private:
   int theMatrix;
   int theChromaLocation;
 };
+
+} // namespace aif::filters::color_adjust

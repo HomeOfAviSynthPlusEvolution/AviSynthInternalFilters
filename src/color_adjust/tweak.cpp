@@ -35,6 +35,8 @@
 #include "tweak.h"
 #include "kernel/common.h"
 #include "kernel_adapter.h"
+
+namespace aif::filters::color_adjust {
 #include "kernel/tweak.h"
 Tweak::Tweak(PClip _child, double _hue, double _sat, double _bright, double _cont, bool _coring, double _startHue,
              double _endHue, double _maxSat, double _minSat, double p, bool _dither, bool _realcalc,
@@ -509,3 +511,5 @@ AVSValue __cdecl Tweak::Create(AVSValue args, void*, IScriptEnvironment* env) {
                    args[14].AsDblDef(1.0),         // dither_strength 1.0 = +/-0.5 on the 0.255 range, scaled for others
                    env);
 }
+
+} // namespace aif::filters::color_adjust

@@ -36,6 +36,8 @@
 #include <avisynth.h>
 #include <cstdint>
 #include "kernel/types.h"
+
+namespace aif::filters::color_adjust {
 class Tweak : public GenericVideoFilter {
   const uint32_t cpu_mask_;
 
@@ -92,3 +94,5 @@ private:
 
   float dither_strength;
 };
+
+} // namespace aif::filters::color_adjust

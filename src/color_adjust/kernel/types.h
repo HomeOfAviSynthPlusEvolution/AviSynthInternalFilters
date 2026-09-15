@@ -33,6 +33,7 @@
 // import and export plugins, or graphical user interfaces.
 
 #pragma once
+namespace aif::filters::color_adjust {
 typedef struct {
   int tv_range_low;
   int tv_range_hi_luma;
@@ -58,3 +59,5 @@ typedef struct {
 
   float middle_chroma_f;
 } luma_chroma_limits_t;
+
+} // namespace aif::filters::color_adjust

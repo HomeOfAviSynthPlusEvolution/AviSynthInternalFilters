@@ -43,6 +43,7 @@
 #include <algorithm>
 #include <string>
 #include "types.h"
+namespace aif::filters::color_adjust {
 #define PI 3.141592653589793
 avs_alignas(64) static const BYTE ditherMap[256] = {
 #if 0
@@ -137,3 +138,5 @@ inline void get_limits(luma_chroma_limits_t& d, int bits_per_pixel) {
 /********************************
  *******   Levels Filter   ******
  ********************************/
+
+} // namespace aif::filters::color_adjust

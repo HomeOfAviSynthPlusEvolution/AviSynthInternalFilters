@@ -36,6 +36,8 @@
 #include <avisynth.h>
 #include <vector>
 #include <cstdint>
+
+namespace aif::filters::convolution {
 class GeneralConvolution : public GenericVideoFilter
 /** This class exposes a video filter that applies general convolutions -- up to a 9x9
   * kernel -- to a clip.  Highway handles the bounded interior; scalar code handles borders.
@@ -79,3 +81,5 @@ private:
   int64_t iWeightSumPositives;
   int64_t iWeightSumNegatives;
 };
+
+} // namespace aif::filters::convolution

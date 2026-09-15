@@ -35,6 +35,8 @@
 #include "rgb_adjust.h"
 #include "kernel/common.h"
 #include "kernel_adapter.h"
+
+namespace aif::filters::color_adjust {
 #define READ_CONDITIONAL(plane_num, var_name, internal_name, condVarSuffix)                                            \
   {                                                                                                                    \
     std::string s = "rgbadjust_" #var_name;                                                                            \
@@ -657,3 +659,5 @@ AVSValue __cdecl RGBAdjust::Create(AVSValue args, void*, IScriptEnvironment* env
 }
 
 /* helper function for Tweak and MaskHS filters */
+
+} // namespace aif::filters::color_adjust

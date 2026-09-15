@@ -36,6 +36,8 @@
 #include <avisynth.h>
 #include <cstdint>
 #include "kernel/types.h"
+
+namespace aif::filters::color_adjust {
 class Levels : public GenericVideoFilter
 /**
   * Class for adjusting levels in a clip
@@ -84,3 +86,5 @@ private:
   template <bool chroma, bool use_gamma>
   AVS_FORCEINLINE float calcPixel(const float pixel);
 };
+
+} // namespace aif::filters::color_adjust

@@ -35,6 +35,8 @@
 #include "levels.h"
 #include "kernel/common.h"
 #include "kernel_adapter.h"
+
+namespace aif::filters::color_adjust {
 #include "kernel/levels.h"
 Levels::Levels(PClip _child, float _in_min, double _gamma, float _in_max, float _out_min, float _out_max, bool _coring,
                bool _dither, IScriptEnvironment* env)
@@ -536,3 +538,5 @@ AVSValue __cdecl Levels::Create(AVSValue args, void*, IScriptEnvironment* env) {
                     (float)args[IN_MAX].AsFloat(), (float)args[OUT_MIN].AsFloat(), (float)args[OUT_MAX].AsFloat(),
                     args[CORING].AsBool(true), args[DITHER].AsBool(false), env);
 }
+
+} // namespace aif::filters::color_adjust
