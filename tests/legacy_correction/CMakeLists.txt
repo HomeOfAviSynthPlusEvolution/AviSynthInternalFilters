@@ -1,0 +1,13 @@
+if(AIF_BUILD_PLUGINS AND AIF_TEST_RUNTIME)
+ add_executable(aif_legacy_correction_filter_tests filter_tests.cpp)
+ target_include_directories(aif_legacy_correction_filter_tests PRIVATE "${AIF_AVISYNTH_INCLUDE_DIR}")
+ target_link_libraries(aif_legacy_correction_filter_tests PRIVATE ${CMAKE_DL_LIBS})
+ aif_target_defaults(aif_legacy_correction_filter_tests)
+ add_dependencies(aif_legacy_correction_filter_tests aif_legacy_correction_plugin)
+ add_test(NAME legacy_correction.filters COMMAND aif_legacy_correction_filter_tests "${AIF_TEST_RUNTIME}" "$<TARGET_FILE:aif_legacy_correction_plugin>")
+endif()
+
+add_executable(aif_legacy_correction_kernel_tests kernel_tests.cpp ../../src/legacy_correction/kernel/correction.cpp)
+target_include_directories(aif_legacy_correction_kernel_tests PRIVATE ../../src/legacy_correction)
+aif_target_defaults(aif_legacy_correction_kernel_tests)
+add_test(NAME legacy_correction.kernels COMMAND aif_legacy_correction_kernel_tests)
