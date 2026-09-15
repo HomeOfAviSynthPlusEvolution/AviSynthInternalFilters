@@ -1,0 +1,8 @@
+if(AIF_BUILD_PLUGINS AND AIF_TEST_RUNTIME)
+ add_executable(aif_multi_overlay_filter_tests filter_tests.cpp)
+ target_include_directories(aif_multi_overlay_filter_tests PRIVATE "${AIF_AVISYNTH_INCLUDE_DIR}")
+ target_link_libraries(aif_multi_overlay_filter_tests PRIVATE ${CMAKE_DL_LIBS})
+ aif_target_defaults(aif_multi_overlay_filter_tests)
+ add_dependencies(aif_multi_overlay_filter_tests aif_multi_overlay_plugin)
+ add_test(NAME multi_overlay.filters COMMAND aif_multi_overlay_filter_tests "${AIF_TEST_RUNTIME}" "$<TARGET_FILE:aif_multi_overlay_plugin>")
+endif()
