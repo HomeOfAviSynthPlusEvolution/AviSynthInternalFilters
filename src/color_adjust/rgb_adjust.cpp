@@ -113,7 +113,7 @@ void RGBAdjust::rgbadjust_create_lut(BYTE* lut_buf, const int plane, RGBAdjustCo
       }
     };
   } else {
-    set_map = [](BYTE* map, int lookup_size, int bits_per_pixel, float dither_strength, const double c0,
+    set_map = [](BYTE* map, int lookup_size, int bits_per_pixel, float /*dither_strength*/, const double c0,
                  const double c1, const double c2) {
       double pixel_max = (1 << bits_per_pixel) - 1;
       if (bits_per_pixel == 8) {
@@ -510,8 +510,6 @@ PVideoFrame __stdcall RGBAdjust::GetFrame(int n, IScriptEnvironment* env) {
         else if (bits_per_pixel <= 16)
           fill_accum_rgb_planar_c<uint16_t>(p_r, p_g, p_b, pitch, accum_r, accum_g, accum_b, w, h,
                                             max_pixel_value_analyze);
-        else // 32 bit float
-          ;  // handled in other branch;
       } else {
         // packed RGB
         const BYTE* srcp = frame->GetReadPtr();

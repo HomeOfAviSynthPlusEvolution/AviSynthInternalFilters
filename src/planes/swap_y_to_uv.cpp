@@ -100,13 +100,13 @@ SwapYToUV::SwapYToUV(PClip _child, PClip _clip, PClip _clipY, PClip _clipA, IScr
   // Autogenerate destination colorformat
   switch (vi.BitsPerComponent()) { // CS_Sub_Width_2 and CS_Sub_Height_2 are 0, vi bitfield can or'd if change needed
     case 8:
-      vi.pixel_type = clipA ? VideoInfo::CS_YUVA420 : vi.pixel_type = VideoInfo::CS_YV12;
+      vi.pixel_type = clipA ? VideoInfo::CS_YUVA420 : VideoInfo::CS_YV12;
       break;
     case 10:
-      vi.pixel_type = clipA ? VideoInfo::CS_YUVA420P10 : vi.pixel_type = VideoInfo::CS_YUV420P10;
+      vi.pixel_type = clipA ? VideoInfo::CS_YUVA420P10 : VideoInfo::CS_YUV420P10;
       break;
     case 12:
-      vi.pixel_type = clipA ? VideoInfo::CS_YUVA420P12 : vi.pixel_type = VideoInfo::CS_YUV420P12;
+      vi.pixel_type = clipA ? VideoInfo::CS_YUVA420P12 : VideoInfo::CS_YUV420P12;
       break;
     case 14:
       vi.pixel_type = clipA ? VideoInfo::CS_YUVA420P14 : VideoInfo::CS_YUV420P14;
