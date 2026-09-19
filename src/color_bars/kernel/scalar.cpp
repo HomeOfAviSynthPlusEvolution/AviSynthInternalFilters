@@ -636,7 +636,8 @@ static void draw_colorbars_yuv(uint8_t* pY8, uint8_t* pU8, uint8_t* pV8, int pit
   // Write luma for one chroma-sample position x.
   // For subsampled formats, each chroma x covers multiple luma pixels.
   // For 444, chromaX == lumaX directly.
-  auto write_luma = [&](int x, pixel_t yval) {
+  // MSVC v141 misses implicit captures used only in if constexpr branches.
+  auto write_luma = [&pY, &pitchY](int x, pixel_t yval) {
     if constexpr (is420)
       pY[x * 2 + 0] = pY[x * 2 + 1] = pY[x * 2 + pitchY] = pY[x * 2 + 1 + pitchY] = yval;
     else if constexpr (is422)
