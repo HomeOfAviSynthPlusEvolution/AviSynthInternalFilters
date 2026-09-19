@@ -1377,18 +1377,9 @@ PVideoFrame Histogram::DrawModeLevels(int n, IScriptEnvironment* env) {
       if (markers) {
         if (RGB) {
           // nice gradients
-          int StartY;
-          switch (plane) {
-            case PLANAR_R:
-              StartY = 0 + 0;
-              break;
-            case PLANAR_G:
-              StartY = 64 + 16;
-              break;
-            case PLANAR_B:
-              StartY = 64 + 16 + 64 + 16;
-              break;
-          }
+          // planesRGB is ordered G, B, R; alpha is not drawn.
+          constexpr int gradient_start_y[] = {80, 160, 0};
+          const int StartY = gradient_start_y[p];
           ptr = pdstb + ((StartY) >> sheight) * dstPitch;
           for (int y = (StartY) >> sheight; y <= (StartY + 64) >> sheight; y++) {
             if (pixelsize == 1) {

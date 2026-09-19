@@ -180,6 +180,8 @@ CombinePlanes::CombinePlanes(PClip _child, PClip _clip2, PClip _clip3, PClip _cl
       case 'V':
         current_target_plane = PLANAR_V;
         break;
+      default:
+        throw AvisynthError("CombinePlanes: invalid target plane");
     }
     target_planes[i] = current_target_plane;
     int target_plane_width = vi_default.width >> vi_default.GetPlaneWidthSubsampling(current_target_plane);
@@ -238,6 +240,8 @@ CombinePlanes::CombinePlanes(PClip _child, PClip _clip2, PClip _clip3, PClip _cl
         case 'V':
           current_source_plane = PLANAR_V;
           break;
+        default:
+          throw AvisynthError("CombinePlanes: invalid source plane");
       }
       source_planes[i] = current_source_plane;
       // check dimensions
@@ -296,6 +300,8 @@ PVideoFrame __stdcall CombinePlanes::GetFrame(int n, IScriptEnvironment* env) {
         case PLANAR_A:
           target_index = 3;
           break;
+        default:
+          throw AvisynthError("CombinePlanes: invalid target plane");
       }
       switch (source_plane) {
         case PLANAR_Y:
@@ -313,6 +319,8 @@ PVideoFrame __stdcall CombinePlanes::GetFrame(int n, IScriptEnvironment* env) {
         case PLANAR_A:
           source_index = 3;
           break;
+        default:
+          throw AvisynthError("CombinePlanes: invalid source plane");
       }
       // !! if offsets would be size_t, be cautious when you subtract two unsigned size_t variables
       RelOffsets[target_index] = Offsets[source_index] - Offsets[target_index];
