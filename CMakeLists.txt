@@ -22,6 +22,13 @@ endif()
 
 function(aif_target_defaults target)
   target_compile_features(${target} PUBLIC cxx_std_17)
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND
+     CMAKE_CXX_COMPILER_ARCHITECTURE_ID MATCHES "^ARM64" AND
+     target MATCHES "^aif_(rotation|planes)_kernels$")
+    # Highway cache_control.h includes arm_acle.h, unavailable in native MSVC
+    # ARM64. Disable cache hints/streaming helpers, not the NEON computations.
+    target_compile_definitions(${target} PRIVATE HWY_DISABLE_CACHE_CONTROL)
+  endif()
   if(target MATCHES "^aif_.*_filters$")
     target_include_directories(${target} PUBLIC
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/common/include>)
